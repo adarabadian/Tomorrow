@@ -1,20 +1,33 @@
-import { Express, Router } from 'express';
-import { createAlertController, getAlertsController, getAlertByIdController, updateAlertController, deleteAlertController, evaluateAlertController } from './controllers/alertController';
+import { Application, Router } from 'express';
+import { 
+  createAlert, 
+  getAlerts, 
+  getAlertById, 
+  updateAlert, 
+  deleteAlert, 
+  evaluateAlertController,
+  getTriggeredAlerts
+} from './controllers/alertController';
 import { handleCurrentWeatherRequest } from './controllers/weatherController';
 
-const router = Router();
-
-// Alert routes
-router.post('/alerts', createAlertController);
-router.get('/alerts', getAlertsController);
-router.get('/alerts/:id', getAlertByIdController);
-router.put('/alerts/:id', updateAlertController);
-router.delete('/alerts/:id', deleteAlertController);
-router.post('/alerts/:id/evaluate', evaluateAlertController);
-
-// Weather routes
-router.get('/weather/current', handleCurrentWeatherRequest);
-
-export const setupRoutes = (app: Express) => {
+/**
+ * Setup all API routes
+ */
+export const setupRoutes = (app: Application): void => {
+  const router = Router();
+  
+  // Alert routes
+  router.post('/alerts', createAlert);
+  router.get('/alerts', getAlerts);
+  router.get('/alerts/triggered', getTriggeredAlerts);
+  router.get('/alerts/:id', getAlertById);
+  router.put('/alerts/:id', updateAlert);
+  router.delete('/alerts/:id', deleteAlert);
+  router.post('/alerts/:id/evaluate', evaluateAlertController);
+  
+  // Weather routes
+  router.get('/weather/current', handleCurrentWeatherRequest);
+  
+  // Apply API prefix
   app.use('/api', router);
 }; 

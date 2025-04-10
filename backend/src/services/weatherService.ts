@@ -1,7 +1,5 @@
 import axios from 'axios';
-
-const TOMORROW_API_KEY = process.env.TOMORROW_API_KEY;
-const TOMORROW_API_URL = 'https://api.tomorrow.io/v4';
+import { Location, formatLocationParam, formatLocationString } from '../utils/locationUtils';
 
 export interface WeatherData {
   temperature: number;
@@ -12,30 +10,39 @@ export interface WeatherData {
   location: string;
 }
 
-export const getCurrentWeather = async (location: { lat: number; lon: number } | { city: string }): Promise<WeatherData> => {
+export const getCurrentWeather = async (location: Location): Promise<WeatherData> => {
   try {
-    const locationParam = 'lat' in location 
-      ? `location=${location.lat},${location.lon}`
-      : `location=${encodeURIComponent(location.city)}`;
+    const apiKey = process.env.TOMORROW_API_KEY;
+    if (!apiKey) throw new Error('API key is required to fetch weather data');
 
-      
-    const response = await axios.get(
-        `${TOMORROW_API_URL}/weather/realtime?${locationParam}&apikey=${TOMORROW_API_KEY}`
-    );
-
-    const weatherData = response.data.data;
-    const locationData = response.data.location;
+    const locationParam = formatLocationParam(location);
+    const url = `https://api.tomorrow.io/v4/weather/realtime?${locationParam}&apikey=${apiKey}&units=metric`;
+    const response = await axios.get(url);
+    const data = response.data;
     
     return {
-        temperature: weatherData.values.temperature,
-        windSpeed: weatherData.values.windSpeed,
-        precipitation: weatherData.values.precipitation,
-        humidity: weatherData.values.humidity,
-        timestamp: weatherData.time,
-        location: locationData
+      temperature: data.data.values.temperature,
+      windSpeed: data.data.values.windSpeed,
+      precipitation: data.data.values.precipitationProbability || 0,
+      humidity: data.data.values.humidity,
+      timestamp: data.data.time,
+      location: formatLocationString(data.location, location)
     };
-  } catch (error) {
-    console.error('Error fetching weather data:', error);
-    throw new Error('Failed to fetch weather data');
+  } catch (error: any) {
+    return handleWeatherApiError(error);
   }
+};
+
+const handleWeatherApiError = (error: any): never => {
+  console.error("Error fetching weather data:", error);
+
+  if (error.response?.status === 401 || error.response?.status === 403) {
+      throw new Error("API key invalid or unauthorized");
+  } else if (error.response?.status === 429) {
+      throw new Error("API rate limit exceeded");
+  } else if (error.response?.data.type === "Invalid Query Parameters") {
+      throw new Error("Location not found");
+  }
+
+  throw new Error("Failed to fetch weather data");
 };

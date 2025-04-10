@@ -1,20 +1,33 @@
 import { Request, Response } from 'express';
-import { createAlert, getAlerts, getAlertById, updateAlert, deleteAlert } from '../models/Alert';
+import { CreateAlertDTO } from '../models/Alert';
+import { validateAlertData } from '../validators/alertValidator';
+import * as alertRepository from '../repositories/alertRepository';
 import { evaluateAlert } from '../services/alertService';
 
-export const createAlertController = async (req: Request, res: Response) => {
+export const createAlert = async (req: Request, res: Response) => {
   try {
-    // Create the alert
-    const alert = await createAlert(req.body);
+    const validation = validateAlertData(req.body);
+    if (!validation.valid) return res.status(400).json({ error: validation.error });
     
-    // Evaluate the alert immediately
+    const newAlert: CreateAlertDTO = {
+      ...req.body,
+      isTriggered: false,
+      lastChecked: new Date()
+    };
+    
+    const alert = await alertRepository.createAlert(newAlert);
     const isTriggered = await evaluateAlert(alert);
     
-    // Return both the alert and its current state
+    // Update the alert with the evaluation result
+    await alertRepository.updateAlert(alert.id, { 
+      isTriggered, 
+      lastChecked: new Date() 
+    });
+    
+    // Return the alert with its current state
     res.status(201).json({
       ...alert,
-      isTriggered,
-      lastChecked: new Date()
+      isTriggered
     });
   } catch (error) {
     console.error('Error creating alert:', error);
@@ -22,61 +35,99 @@ export const createAlertController = async (req: Request, res: Response) => {
   }
 };
 
-export const getAlertsController = async (req: Request, res: Response) => {
+export const getAlerts = async (req: Request, res: Response) => {
   try {
-    const alerts = await getAlerts();
+    const alerts = await alertRepository.getAlerts();
     res.json(alerts);
   } catch (error) {
+    console.error('Error fetching alerts:', error);
     res.status(500).json({ error: 'Failed to fetch alerts' });
   }
 };
 
-export const getAlertByIdController = async (req: Request, res: Response) => {
+export const getAlertById = async (req: Request, res: Response) => {
   try {
-    const alert = await getAlertById(req.params.id);
-    if (!alert) {
-      return res.status(404).json({ error: 'Alert not found' });
-    }
+    const alert = await alertRepository.getAlertById(req.params.id);
+    if (!alert) return res.status(404).json({ error: 'Alert not found' });
     res.json(alert);
   } catch (error) {
+    console.error('Error fetching alert:', error);
     res.status(500).json({ error: 'Failed to fetch alert' });
   }
 };
 
-export const updateAlertController = async (req: Request, res: Response) => {
+export const updateAlert = async (req: Request, res: Response) => {
   try {
-    const alert = await updateAlert(req.params.id, req.body);
-    if (!alert) {
-      return res.status(404).json({ error: 'Alert not found' });
+    const { isTriggered, lastChecked, ...updateData } = req.body;
+    
+    // If updating critical fields, validate them
+    if (updateData.location || updateData.parameter || 
+        updateData.threshold !== undefined || updateData.condition) {
+      
+      // Get existing alert to merge with updates for validation
+      const existingAlert = await alertRepository.getAlertById(req.params.id);
+      if (!existingAlert) return res.status(404).json({ error: 'Alert not found' });
+      
+      const validation = validateAlertData({
+        ...existingAlert,
+        ...updateData
+      });
+      
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+      }
     }
+    
+    const alert = await alertRepository.updateAlert(req.params.id, updateData);
+    if (!alert) return res.status(404).json({ error: 'Alert not found' });
     res.json(alert);
   } catch (error) {
+    console.error('Error updating alert:', error);
     res.status(500).json({ error: 'Failed to update alert' });
   }
 };
 
-export const deleteAlertController = async (req: Request, res: Response) => {
+export const deleteAlert = async (req: Request, res: Response) => {
   try {
-    const success = await deleteAlert(req.params.id);
-    if (!success) {
-      return res.status(404).json({ error: 'Alert not found' });
-    }
+    const success = await alertRepository.deleteAlert(req.params.id);
+    if (!success) return res.status(404).json({ error: 'Alert not found' });
     res.status(204).send();
   } catch (error) {
+    console.error('Error deleting alert:', error);
     res.status(500).json({ error: 'Failed to delete alert' });
   }
 };
 
 export const evaluateAlertController = async (req: Request, res: Response) => {
   try {
-    const alert = await getAlertById(req.params.id);
-    if (!alert) {
-      return res.status(404).json({ error: 'Alert not found' });
-    }
+    const alert = await alertRepository.getAlertById(req.params.id);
+    if (!alert) return res.status(404).json({ error: 'Alert not found' });
 
-    const result = await evaluateAlert(alert);
-    res.json(result);
+    const isTriggered = await evaluateAlert(alert);
+    
+    await alertRepository.updateAlert(alert.id, { 
+      isTriggered, 
+      lastChecked: new Date() 
+    });
+    
+    res.json({
+      id: alert.id,
+      name: alert.name,
+      isTriggered,
+      lastChecked: new Date()
+    });
   } catch (error) {
+    console.error('Error evaluating alert:', error);
     res.status(500).json({ error: 'Failed to evaluate alert' });
+  }
+};
+
+export const getTriggeredAlerts = async (req: Request, res: Response) => {
+  try {
+    const alerts = await alertRepository.getTriggeredAlerts();
+    res.json(alerts);
+  } catch (error) {
+    console.error('Error fetching triggered alerts:', error);
+    res.status(500).json({ error: 'Failed to fetch triggered alerts' });
   }
 }; 

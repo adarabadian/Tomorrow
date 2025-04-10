@@ -1,52 +1,64 @@
-import { Alert, updateAlert } from '../models/Alert';
+import { Alert } from '../models/Alert';
+import * as alertRepository from '../repositories/alertRepository';
 import { getCurrentWeather } from './weatherService';
+import { extractLocation } from '../utils/locationUtils';
 
+/**
+ * Evaluate a condition based on alert parameters and a current value
+ */
+const evaluateCondition = (currentValue: number, alert: Alert): boolean => {
+  switch (alert.condition) {
+    case '>':
+      return currentValue > alert.threshold;
+    case '<':
+      return currentValue < alert.threshold;
+    case '>=':
+      return currentValue >= alert.threshold;
+    case '<=':
+      return currentValue <= alert.threshold;
+    case '==':
+      return currentValue === alert.threshold;
+    default:
+      throw new Error(`Invalid condition: ${alert.condition}`);
+  }
+};
+
+/**
+ * Get the current parameter value from weather data
+ */
+const getParameterValue = async (alert: Alert): Promise<number> => {
+  // Get location from alert
+  const location = extractLocation(alert);
+  
+  // Fetch current weather data
+  const weather = await getCurrentWeather(location);
+  
+  // Get the parameter value
+  const currentValue = Number(weather[alert.parameter as keyof typeof weather]);
+  if (isNaN(currentValue)) {
+    throw new Error(`Invalid weather parameter: ${alert.parameter}`);
+  }
+  
+  return currentValue;
+};
+
+/**
+ * Evaluate an alert against current weather conditions
+ */
 export const evaluateAlert = async (alert: Alert): Promise<boolean> => {
   try {
-    let location: { lat: number; lon: number } | { city: string };
+    // Get the current parameter value
+    const currentValue = await getParameterValue(alert);
     
-    if (alert.location.coordinates) {
-      location = {
-        lat: alert.location.coordinates.lat,
-        lon: alert.location.coordinates.lon
-      };
-    } else if (alert.location.city) {
-      location = { city: alert.location.city };
-    } else {
-      throw new Error('Location must be specified with either coordinates or city');
-    }
-
-    const weather = await getCurrentWeather(location);
+    // Evaluate the condition
+    const isTriggered = evaluateCondition(currentValue, alert);
     
-    const currentValue = Number(weather[alert.parameter as keyof typeof weather]);
-    if (isNaN(currentValue)) {
-      throw new Error(`Invalid weather parameter: ${alert.parameter}`);
-    }
-
-    let isTriggered = false;
-
-    switch (alert.condition) {
-      case '>':
-        isTriggered = currentValue > alert.threshold;
-        break;
-      case '<':
-        isTriggered = currentValue < alert.threshold;
-        break;
-      case '>=':
-        isTriggered = currentValue >= alert.threshold;
-        break;
-      case '<=':
-        isTriggered = currentValue <= alert.threshold;
-        break;
-      case '==':
-        isTriggered = currentValue === alert.threshold;
-        break;
-    }
-
+    // Update alert in database if triggered status has changed
     if (isTriggered !== alert.isTriggered) {
-      alert.isTriggered = isTriggered;
-      alert.lastChecked = new Date();
-      await updateAlert(alert.id, alert);
+      await alertRepository.updateAlert(alert.id, { 
+        isTriggered,
+        lastChecked: new Date()
+      });
     }
 
     return isTriggered;

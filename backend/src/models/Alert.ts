@@ -1,5 +1,8 @@
-import { pool } from '../config/database';
+import { pool } from "../config/database";
 
+/**
+ * Alert model representing a weather alert
+ */
 export interface Alert {
   id: string;
   name: string;
@@ -20,6 +23,16 @@ export interface Alert {
   updatedAt: Date;
   userEmail: string;
 }
+
+/**
+ * Type for creating a new alert (excludes auto-generated fields)
+ */
+export type CreateAlertDTO = Omit<Alert, 'id' | 'createdAt' | 'updatedAt'>;
+
+/**
+ * Type for updating an existing alert (all fields optional)
+ */
+export type UpdateAlertDTO = Partial<Alert>;
 
 export const createAlert = async (alert: Omit<Alert, 'id' | 'createdAt' | 'updatedAt'>): Promise<Alert> => {
   const { rows } = await pool.query(
