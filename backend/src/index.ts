@@ -31,7 +31,7 @@ async function start() {
     // Start server
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      startAlertEvaluationService();
+      //! startAlertEvaluationService();
     });
     
     // Handle graceful shutdown

@@ -1,52 +1,32 @@
-/**
- * Interface for location with coordinates
- */
 export interface LocationCoordinates {
   lat: number;
   lon: number;
 }
 
-/**
- * Interface for location with city name
- */
 export interface LocationCity {
   city: string;
 }
 
-/**
- * Union type for location that can be either coordinates or city
- */
 export type Location = LocationCoordinates | LocationCity;
 
-/**
- * Type guard to check if a location is coordinates
- */
 export const isLocationCoordinates = (location: Location): location is LocationCoordinates => {
   return 'lat' in location && 'lon' in location;
 };
 
-/**
- * Type guard to check if a location is city
- */
 export const isLocationCity = (location: Location): location is LocationCity => {
   return 'city' in location;
 };
 
-/**
- * Formats a location parameter for API requests
- */
+// Formats a location parameter for API requests
 export const formatLocationParam = (location: Location): string => {
   return isLocationCoordinates(location) 
     ? `location=${location.lat},${location.lon}`
     : `location=${encodeURIComponent(location.city)}`;
 };
 
-/**
- * Formats a location string for display purposes
- */
+// Formats a location string for display purposes
 export const formatLocationString = (locationData: any, location: Location): string => {
   let locationString = 'Unknown';
-  
   if (!locationData) return locationString;
 
   if (locationData.name) {

@@ -1,34 +1,28 @@
 import { Request, Response } from 'express';
-import { CreateAlertDTO } from '../models/Alert';
 import { validateAlertData } from '../validators/alertValidator';
 import * as alertRepository from '../repositories/alertRepository';
-import { evaluateAlert } from '../services/alertService';
+import { evaluateAlert, checkAlertCondition } from '../services/alertService';
 
 export const createAlert = async (req: Request, res: Response) => {
   try {
     const validation = validateAlertData(req.body);
     if (!validation.valid) return res.status(400).json({ error: validation.error });
     
-    const newAlert: CreateAlertDTO = {
+    const isTriggered = await checkAlertCondition({
       ...req.body,
-      isTriggered: false,
+      lastChecked: new Date()
+    });
+    
+    // Create alert with the correct triggered state
+    const newAlert = {
+      ...req.body,
+      isTriggered,
       lastChecked: new Date()
     };
     
     const alert = await alertRepository.createAlert(newAlert);
-    const isTriggered = await evaluateAlert(alert);
     
-    // Update the alert with the evaluation result
-    await alertRepository.updateAlert(alert.id, { 
-      isTriggered, 
-      lastChecked: new Date() 
-    });
-    
-    // Return the alert with its current state
-    res.status(201).json({
-      ...alert,
-      isTriggered
-    });
+    res.status(201).json({ ...alert });
   } catch (error) {
     console.error('Error creating alert:', error);
     res.status(500).json({ error: 'Failed to create alert' });
@@ -130,4 +124,4 @@ export const getTriggeredAlerts = async (req: Request, res: Response) => {
     console.error('Error fetching triggered alerts:', error);
     res.status(500).json({ error: 'Failed to fetch triggered alerts' });
   }
-}; 
+};

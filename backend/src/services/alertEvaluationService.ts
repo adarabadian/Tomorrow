@@ -2,15 +2,10 @@ import cron from 'node-cron';
 import { Alert } from '../models/Alert';
 import * as alertRepository from '../repositories/alertRepository';
 import { sendNotification } from './notificationService';
-import { getCurrentWeather } from './weatherService';
-import { extractLocation, formatLocationParam } from '../utils/locationUtils';
+import { getCurrentWeather, WeatherData } from './weatherService';
+import { extractLocation, formatLocationParam, Location } from '../utils/locationUtils';
 
-// Cache for locations - refreshed each evaluation cycle
-const locationCache = new Map<string, Alert[]>();
-
-/**
- * Evaluates an alert condition against a value
- */
+// Evaluate if an alert condition is met
 const evaluateCondition = (value: number, alert: Alert): boolean => {
   switch (alert.condition) {
     case '>': return value > alert.threshold;
@@ -22,74 +17,53 @@ const evaluateCondition = (value: number, alert: Alert): boolean => {
   }
 };
 
-/**
- * Handle alert processing errors
- */
-const handleAlertProcessingError = (alertId: string, error: any): void => {
-  if (error.message) {
-    console.error(`Error processing alert ${alertId}: ${error.message}`);
-  } else {
-    console.error(`Unknown error processing alert ${alertId}:`, error);
+// Error handler functions
+const logError = {
+  alert: (alertId: string, error: any): void => {
+    const message = error.message || 'Unknown error';
+    console.error(`Error processing alert ${alertId}: ${message}`);
+  },
+  
+  location: (locationKey: string, error: any): void => {
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+      console.error(`Timeout error for location ${locationKey}: ${error.message}`);
+    } else if (error.message?.includes('API key')) {
+      console.error(`API key error for location ${locationKey}: ${error.message}`);
+    } else {
+      console.error(`Error processing location ${locationKey}:`, error);
+    }
   }
 };
 
-/**
- * Handle location group processing errors
- */
-const handleLocationError = (locationKey: string, error: any): void => {
-  if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
-    console.error(`Timeout error for location ${locationKey}: ${error.message}`);
-  } else if (error.message && error.message.includes('API key')) {
-    console.error(`API key error for location ${locationKey}: ${error.message}`);
-  } else {
-    console.error(`Error processing location ${locationKey}:`, error);
-  }
-};
-
-/**
- * Get location key for an alert
- */
-const getLocationKey = (alert: Alert): string => {
-  try {
-    const location = extractLocation(alert);
-    return formatLocationParam(location);
-  } catch (error) {
-    console.error(`Error getting location key for alert ${alert.id}:`, error);
-    return '';
-  }
-};
-
-/**
- * Group alerts by location to minimize API calls
- * Uses cached location groups when possible
- */
+// Group alerts by location
 const groupByLocation = (alerts: Alert[]): Map<string, Alert[]> => {
-  // Clear cache and rebuild
-  locationCache.clear();
+  const groups = new Map<string, Alert[]>();
   
   for (const alert of alerts) {
-    const locationKey = getLocationKey(alert);
-    if (!locationKey) continue;
-    
-    if (!locationCache.has(locationKey)) {
-      locationCache.set(locationKey, []);
+    try {
+      const location = extractLocation(alert);
+      const locationKey = formatLocationParam(location);
+      
+      if (!groups.has(locationKey)) {
+        groups.set(locationKey, []);
+      }
+      
+      groups.get(locationKey)!.push(alert);
+    } catch (error) {
+      logError.alert(alert.id, error);
     }
-    
-    locationCache.get(locationKey)!.push(alert);
   }
   
-  return locationCache;
+  return groups;
 };
 
-/**
- * Process a single alert with the weather data
- */
-const processAlert = async (alert: Alert, weather: any): Promise<void> => {
+// Process a single alert with weather data
+const processAlert = async (alert: Alert, weather: WeatherData): Promise<boolean> => {
   try {
     const paramName = alert.parameter;
     if (!(paramName in weather)) {
       console.error(`Parameter ${paramName} not found in weather data for alert ${alert.id}`);
-      return;
+      return false;
     }
     
     const weatherValue = weather[paramName as keyof typeof weather];
@@ -104,71 +78,111 @@ const processAlert = async (alert: Alert, weather: any): Promise<void> => {
         lastChecked: new Date()
       });
       
-      // Send notification if newly triggered - always pass currentValue
-      if (isTriggered && !wasTriggered) {
-        await sendNotification(alert, currentValue);
-      }
+      // Send notification if newly triggered
+      if (isTriggered && !wasTriggered) await sendNotification(alert, currentValue);
     }
+    
+    return true;
   } catch (error) {
-    handleAlertProcessingError(alert.id, error);
+    logError.alert(alert.id, error);
+    return false;
   }
 };
 
-/**
- * Process alerts for a location
- */
-const processLocationAlerts = async (locationKey: string, alerts: Alert[]): Promise<void> => {
-  try {
-    console.log(`Processing ${alerts.length} alerts for location: ${locationKey}`);
-
-    // Get weather data once for this location
-    const location = extractLocation(alerts[0]);
-    const weather = await getCurrentWeather(location);
-
-    // Process each alert with the same weather data
-    for (const alert of alerts) {
-      await processAlert(alert, weather);
+// Prepare location requests from grouped alerts
+const prepareLocationRequests = (locationGroups: Map<string, Alert[]>) => {
+  const requests = [];
+  
+  for (const [key, alerts] of locationGroups.entries()) {
+    if (alerts.length === 0) continue;
+    
+    try {
+      const location = extractLocation(alerts[0]);
+      requests.push({ key, location, alerts });
+    } catch (error) {
+      logError.location(key, error);
     }
-  } catch (error) {
-    handleLocationError(locationKey, error);
   }
+  
+  return requests;
 };
 
-/**
- * Run alert evaluation process
- */
+// Fetch weather data for all locations in parallel
+const fetchWeatherData = async (requests: any[]) => {
+  const weatherPromises = requests.map(async (req) => {
+    try {
+      const weather = await getCurrentWeather(req.location);
+      return { ...req, weather, success: true };
+    } catch (error) {
+      logError.location(req.key, error);
+      return { ...req, success: false };
+    }
+  });
+  
+  const results = await Promise.all(weatherPromises);
+  return results.filter(r => r.success && r.weather);
+};
+
+// Process all alerts with their respective weather data
+const processAllAlerts = async (successfulResults: any[]) => {
+  // Create all alert processing tasks
+  const tasks = [];
+  
+  for (const result of successfulResults) {
+    console.log(`Processing ${result.alerts.length} alerts for location: ${result.key}`);
+    
+    for (const alert of result.alerts) {
+      tasks.push(processAlert(alert, result.weather));
+    }
+  }
+  
+  // Run all tasks in parallel
+  return await Promise.all(tasks);
+};
+
+// Main evaluation function
 const runEvaluation = async (): Promise<void> => {
   try {
     // Get all alerts
     const alerts = await alertRepository.getAlerts();
     console.log(`Evaluating ${alerts.length} alerts`);
-    
     if (alerts.length === 0) return;
     
-    // Group by location using cached info when possible
+    // Group alerts by location
     const locationGroups = groupByLocation(alerts);
     console.log(`Grouped into ${locationGroups.size} locations`);
     
-    // Process each location group
-    for (const [locationKey, locationAlerts] of locationGroups.entries()) {
-      await processLocationAlerts(locationKey, locationAlerts);
+    // Prepare location requests
+    const locationRequests = prepareLocationRequests(locationGroups);
+    if (locationRequests.length === 0) return;
+    
+    // Fetch weather data in parallel
+    console.log(`Fetching weather data for ${locationRequests.length} locations in parallel`);
+    const successfulRequests = await fetchWeatherData(locationRequests);
+    
+    // Log any failures
+    const failedCount = locationRequests.length - successfulRequests.length;
+    if (failedCount > 0) {
+      console.error(`Failed to fetch weather data for ${failedCount} locations`);
     }
     
-    console.log('Alert evaluation completed');
+    // Process all alerts in parallel
+    const alertResults = await processAllAlerts(successfulRequests);
+    
+    // Summarize results
+    const totalProcessed = alertResults.length;
+    const successfulAlerts = alertResults.filter(Boolean).length;
+    const failedAlerts = totalProcessed - successfulAlerts;
+    
+    console.log(`Alert evaluation completed: ${successfulAlerts} alerts processed successfully, ${failedAlerts} failed`);
   } catch (error) {
     console.error('Error in alert evaluation:', error);
   }
 };
 
-/**
- * Start the scheduled evaluation service
- */
+// Start the scheduled evaluation service & run evaluation immediately
 export const startAlertEvaluationService = (): void => {
   console.log('Starting alert evaluation service (every 5 minutes)');
-  
-  // Run immediately
   runEvaluation();
-  
-  // Schedule for every 5 minutes
   cron.schedule('*/5 * * * *', runEvaluation);
 }; 
