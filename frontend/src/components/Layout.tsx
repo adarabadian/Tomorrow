@@ -1,42 +1,58 @@
-import React from 'react';
-import { AppBar, Toolbar, Typography, Button, Container, Box } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
-import CloudIcon from '@mui/icons-material/Cloud';
+import React, { useState } from 'react';
+import { Box, Container, useMediaQuery, useTheme } from '@mui/material';
+import Navbar from './Navigation/Navbar';
+import Sidebar from './Navigation/Sidebar';
+import Footer from './Navigation/Footer';
+import { useLocation } from 'react-router-dom';
+
+// Navigation items definition
+export const navItems = [
+  { name: 'Home', path: '/', icon: 'HomeIcon' },
+  { name: 'Alerts', path: '/alerts', icon: 'NotificationsIcon' },
+  { name: 'Current State', path: '/current-state', icon: 'WarningIcon' }
+];
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout = ({ children }: LayoutProps) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
+
+  // Toggle drawer
+  const toggleDrawer = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppBar position="static">
-        <Toolbar>
-          <CloudIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Weather Alert System
-          </Typography>
-          <Button color="inherit" component={RouterLink} to="/">
-            Home
-          </Button>
-          <Button color="inherit" component={RouterLink} to="/alerts">
-            Alerts
-          </Button>
-          <Button color="inherit" component={RouterLink} to="/current-state">
-            Current State
-          </Button>
-        </Toolbar>
-      </AppBar>
+      <Navbar 
+        isMobile={isMobile} 
+        toggleDrawer={toggleDrawer} 
+        navItems={navItems} 
+        isActive={isActive} 
+      />
+      
+      {/* Mobile drawer */}
+      <Sidebar
+        open={drawerOpen}
+        onClose={toggleDrawer}
+        navItems={navItems}
+        isActive={isActive}
+      />
+      
+      {/* Main content */}
       <Container component="main" sx={{ mt: 4, mb: 4, flex: 1 }}>
         {children}
       </Container>
-      <Box component="footer" sx={{ py: 3, px: 2, mt: 'auto', backgroundColor: 'background.paper' }}>
-        <Container maxWidth="sm">
-          <Typography variant="body2" color="text.secondary" align="center">
-            © {new Date().getFullYear()} Weather Alert System
-          </Typography>
-        </Container>
-      </Box>
+      
+      {/* Footer */}
+      <Footer />
     </Box>
   );
 };

@@ -18,7 +18,7 @@ interface EmailConfig {
   text: string;
 }
 
-//! I have an exmple working but didnt want to share sensitive info so this is just a POC
+//! I have an exmple working but didnt want to share sensitive info (such as email credentials) so this is just a POC
 const getEmailConfig = (): {
   host: string;
   port: number;

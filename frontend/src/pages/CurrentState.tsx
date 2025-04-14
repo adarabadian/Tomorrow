@@ -1,106 +1,75 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  List,
-  ListItem,
-  ListItemText,
-  Chip,
-  CircularProgress,
-} from '@mui/material';
-import { Alert } from '../types/weather';
-import { getAlerts } from '../services/alertService';
+import React from 'react';
+import { Box, Fade, Typography } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import WarningIcon from '@mui/icons-material/Warning';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { useAlerts } from '../contexts/AlertsContext';
+import PageHeader from '../components/PageHeader/PageHeader';
+import LoadingState from '../components/LoadingState/LoadingState';
+import AlertStatusOverview from '../components/AlertStatusOverview/AlertStatusOverview';
+import AlertStatusList from '../components/AlertList/AlertStatusList';
 
 const CurrentState: React.FC = () => {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { alerts, loading, error, refreshAlerts, lastUpdated } = useAlerts();
 
-  useEffect(() => {
-    const loadAlerts = async () => {
-      try {
-        const data = await getAlerts();
-        setAlerts(data);
-      } catch (err) {
-        setError('Failed to load alerts');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAlerts();
-    const interval = setInterval(loadAlerts, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const triggeredAlerts = alerts.filter((alert) => alert.isTriggered);
-  const activeAlerts = alerts.filter((alert) => !alert.isTriggered);
-
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Typography color="error" align="center">
-        {error}
-      </Typography>
-    );
-  }
+  // Filter alerts by status
+  const triggeredAlerts = alerts.filter(alert => alert.isTriggered);
+  const normalAlerts = alerts.filter(alert => !alert.isTriggered);
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Alert Status
-      </Typography>
+      <PageHeader 
+        title="Alert Status"
+        action={{
+          label: "Refresh",
+          onClick: refreshAlerts,
+          icon: <RefreshIcon />,
+          loading: loading,
+          disabled: loading
+        }}
+      />
 
-      {triggeredAlerts.length > 0 ? (
-        <Paper elevation={3} sx={{ p: 2, mb: 3, backgroundColor: '#ffebee' }}>
-          <Typography variant="h6" color="error" gutterBottom>
-            Active Alerts ({triggeredAlerts.length})
-          </Typography>
-          <List>
-            {triggeredAlerts.map((alert) => (
-              <ListItem key={alert.id}>
-                <ListItemText
-                  primary={alert.name}
-                  secondary={`${alert.parameter} ${alert.condition} ${alert.threshold}°C`}
-                />
-                <Chip label="Triggered" color="error" />
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-      ) : (
-        <Paper elevation={3} sx={{ p: 2, mb: 3, backgroundColor: '#e8f5e9' }}>
-          <Typography variant="h6" color="success.main" align="center">
-            All Clear - No Active Alerts
-          </Typography>
-        </Paper>
-      )}
+      <LoadingState 
+        loading={loading && alerts.length === 0} 
+        error={error}
+        isEmpty={alerts.length === 0 && !loading && !error}
+        emptyMessage="No alerts have been created yet"
+      >
+        <Box sx={{ mb: 4 }}>
+          <AlertStatusOverview 
+            alerts={alerts} 
+            lastUpdated={lastUpdated || new Date()} 
+          />
+        </Box>
 
-      <Paper elevation={3} sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          Inactive Alerts ({activeAlerts.length})
-        </Typography>
-        <List>
-          {activeAlerts.map((alert) => (
-            <ListItem key={alert.id}>
-              <ListItemText
-                primary={alert.name}
-                secondary={`${alert.parameter} ${alert.condition} ${alert.threshold}°C`}
-              />
-              <Chip label="Normal" color="success" />
-            </ListItem>
-          ))}
-        </List>
-      </Paper>
+        <Fade in={true}>
+          <Box>
+            <AlertStatusList
+              alerts={triggeredAlerts}
+              title="Active Alerts"
+              icon={<WarningIcon />}
+              borderColor="#f44336"
+              backgroundColor="rgba(244, 67, 54, 0.05)"
+            />
+
+            <AlertStatusList
+              alerts={normalAlerts}
+              title="Normal Alerts"
+              icon={<CheckCircleIcon />}
+              borderColor="#4caf50"
+              backgroundColor="rgba(76, 175, 80, 0.05)"
+            />
+
+            {alerts.length > 0 && triggeredAlerts.length === 0 && normalAlerts.length === 0 && (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="h6" color="text.secondary">
+                  No alerts are currently being monitored
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Fade>
+      </LoadingState>
     </Box>
   );
 };

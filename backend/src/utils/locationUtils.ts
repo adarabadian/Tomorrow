@@ -21,7 +21,7 @@ export const isLocationCity = (location: Location): location is LocationCity => 
 export const formatLocationParam = (location: Location): string => {
   return isLocationCoordinates(location) 
     ? `location=${location.lat},${location.lon}`
-    : `location=${encodeURIComponent(location.city)}`;
+    : `location=${encodeURIComponent(location.city.replace(/,/g, ' ').trim())}`;
 };
 
 // Formats a location string for display purposes

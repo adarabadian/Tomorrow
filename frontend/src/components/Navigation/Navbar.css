@@ -1,0 +1,31 @@
+.navbar-logo {
+  height: 40px;
+  margin-right: 8px;
+}
+
+.navbar-menu-button {
+  margin-right: 16px;
+}
+
+.navbar-title {
+  flex-grow: 1;
+  display: block;
+}
+
+.navbar-links {
+  display: flex;
+}
+
+.navbar-drawer-container {
+  width: 250px;
+}
+
+.navbar-drawer-header {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+}
+
+.navbar-drawer-list {
+  width: 100%;
+} 

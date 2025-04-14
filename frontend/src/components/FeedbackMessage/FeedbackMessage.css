@@ -1,0 +1,44 @@
+.feedback-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.feedback-loading-spinner {
+  animation: pulse 1.5s infinite ease-in-out !important;
+}
+
+.feedback-success {
+  color: var(--success-main, #4caf50);
+  margin-left: 8px;
+  animation: fadeInOut 1.5s ease-in-out;
+}
+
+.feedback-success-icon {
+  animation: scaleIn 0.3s ease-out;
+}
+
+.feedback-error {
+  color: var(--error-main, #f44336);
+  font-size: 0.75rem;
+  margin-top: 4px;
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.feedback-info {
+  color: var(--info-main, #2196f3);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.feedback-snackbar-content {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+} 

@@ -3,7 +3,15 @@ import { WeatherData } from '../types/weather';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
-export const fetchCurrentWeather = async (location: { lat: number; lon: number } | { city: string }): Promise<WeatherData> => {
+// Define location parameter types
+export type LocationCoordinates = { lat: number; lon: number };
+export type LocationCity = { city: string };
+export type LocationParam = LocationCoordinates | LocationCity;
+
+/**
+ * Fetch current weather data for a location
+ */
+export const fetchCurrentWeather = async (location: LocationParam): Promise<WeatherData> => {
   try {
     const params = 'lat' in location
       ? { lat: location.lat, lon: location.lon }

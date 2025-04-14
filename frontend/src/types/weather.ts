@@ -4,6 +4,7 @@ export interface WeatherData {
   precipitation: number;
   humidity: number;
   timestamp: string;
+  location?: string;
 }
 
 export interface Alert {
@@ -22,4 +23,5 @@ export interface Alert {
   description?: string;
   isTriggered: boolean;
   lastChecked: string;
+  resolvedLocation?: string;
 } 

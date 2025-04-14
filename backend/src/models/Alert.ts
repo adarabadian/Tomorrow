@@ -20,4 +20,8 @@ export interface Alert {
   createdAt: Date;
   updatedAt: Date;
   userEmail: string;
+  lastFetchSuccess: boolean;
+  lastFetchTime: Date;
+  lastValue?: number;
+  resolvedLocation?: string;
 }

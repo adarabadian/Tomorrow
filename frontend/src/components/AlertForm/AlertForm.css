@@ -1,0 +1,67 @@
+.alert-form-container {
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.alert-form {
+  margin-top: 4px;
+}
+
+.alert-form .MuiGrid-container > .MuiGrid-item {
+  margin-bottom: 6px;
+}
+
+.alert-form .MuiGrid-container {
+  margin-top: 0;
+}
+
+.alert-form-section {
+  margin-bottom: 8px;
+}
+
+.alert-form-section-title {
+  margin-bottom: 2px;
+  color: var(--text-primary, rgba(0, 0, 0, 0.87));
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.alert-form-button {
+  transition: transform 0.2s ease;
+}
+
+.alert-form-button:hover {
+  transform: scale(1.02);
+}
+
+/* Animations */
+.alert-form-section-1 {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.alert-form-section-2 {
+  animation: fadeInUp 0.3s ease-out 0.1s;
+  animation-fill-mode: both;
+}
+
+.alert-form-section-3 {
+  animation: fadeInUp 0.3s ease-out 0.2s;
+  animation-fill-mode: both;
+}
+
+.alert-form-button-container {
+  animation: fadeIn 0.4s ease-out 0.3s;
+  animation-fill-mode: both;
+  margin-top: 2px;
+}
+
+@media (max-width: 600px) {
+  .alert-form-container {
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .alert-form-section {
+    margin-bottom: 6px;
+  }
+} 

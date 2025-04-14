@@ -1,0 +1,31 @@
+.alert-basic-info-field {
+  position: relative;
+}
+
+.alert-basic-info-valid-icon {
+  position: absolute;
+  right: 12px;
+  top: 20px;
+  color: var(--success-main, #4caf50);
+  animation: scaleIn 0.2s ease-out;
+}
+
+.alert-basic-info-email-help {
+  color: var(--text-secondary, rgba(0, 0, 0, 0.6));
+  font-size: 0.75rem;
+  margin-top: 2px;
+  padding-left: 12px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.alert-basic-info-tooltip {
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.alert-basic-info-icon {
+  transition: transform 0.2s ease;
+}
+
+.alert-basic-info-icon:hover {
+  transform: scale(1.2);
+} 

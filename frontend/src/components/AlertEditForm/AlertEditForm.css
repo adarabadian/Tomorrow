@@ -1,0 +1,108 @@
+.alert-edit-form {
+  margin-top: 2px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.alert-edit-dialog-content {
+  padding-top: 8px !important;
+}
+
+.alert-edit-form .MuiGrid-container > .MuiGrid-item {
+  margin-bottom: 6px;
+}
+
+.alert-edit-form .MuiGrid-container {
+  margin-top: 0;
+}
+
+.alert-edit-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 240px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.alert-edit-success {
+  color: var(--success-main, #4caf50);
+  margin-left: 8px;
+  animation: fadeInOut 1.5s ease-in-out;
+}
+
+.alert-edit-validation {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--error-main, #f44336);
+}
+
+.alert-edit-field {
+  position: relative;
+}
+
+.alert-edit-field-valid {
+  color: var(--success-main, #4caf50);
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  animation: scaleIn 0.2s ease-out;
+}
+
+.alert-edit-dialog-title {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.alert-edit-dialog-actions {
+  animation: fadeIn 0.4s ease-out;
+  padding: 12px;
+}
+
+.alert-edit-section-title {
+  margin-bottom: 2px;
+  font-size: 1rem;
+}
+
+/* Animated form fields */
+.form-field-animation-1 {
+  animation: fadeInUp 0.3s ease-out;
+  margin-bottom: 8px;
+}
+
+.form-field-animation-2 {
+  animation: fadeInUp 0.3s ease-out 0.1s;
+  animation-fill-mode: both;
+  margin-bottom: 8px;
+}
+
+.form-field-animation-3 {
+  animation: fadeInUp 0.3s ease-out 0.2s;
+  animation-fill-mode: both;
+}
+
+/* Responsive Styling */
+@media (max-width: 600px) {
+  .alert-edit-dialog-content {
+    padding: 8px !important;
+    padding-top: 8px !important;
+  }
+  
+  .alert-edit-form {
+    margin-top: 2px;
+  }
+  
+  .alert-edit-loading {
+    min-height: 180px;
+  }
+  
+  .form-field-animation-1,
+  .form-field-animation-2 {
+    margin-bottom: 6px;
+  }
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+} 

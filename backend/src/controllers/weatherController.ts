@@ -1,72 +1,16 @@
 import { Request, Response } from 'express';
-import { getCurrentWeather } from '../services/weatherService';
-import { Location } from '../utils/locationUtils';
+import { getCurrentWeather, getCacheStatus, clearWeatherCache } from '../services/weatherService';
+import { validateLocationParams } from '../validators/locationValidator';
+
+// Default location configuration (can be moved to environment variables if needed)
+const DEFAULT_LOCATION = { city: 'New York City' };
 
 /**
- * Validate query parameters for weather request
+ * Standard error handler for weather controllers
  */
-const validateLocationParams = (query: any): { valid: boolean; error?: string; location?: Location } => {
-  const { lat, lon, city } = query;
-  
-  if (!lat && !lon && !city) {
-    return { 
-      valid: false, 
-      error: 'Either coordinates (lat, lon) or city must be provided' 
-    };
-  }
-
-  if (lat && lon) {
-    // Validate coordinates
-    const numLat = Number(lat);
-    const numLon = Number(lon);
-    
-    if (isNaN(numLat) || isNaN(numLon)) {
-      return {
-        valid: false,
-        error: 'Coordinates must be valid numbers'
-      };
-    }
-    
-    if (numLat < -90 || numLat > 90) {
-      return {
-        valid: false,
-        error: 'Latitude must be between -90 and 90'
-      };
-    }
-    
-    if (numLon < -180 || numLon > 180) {
-      return {
-        valid: false,
-        error: 'Longitude must be between -180 and 180'
-      };
-    }
-    
-    return {
-      valid: true,
-      location: {
-        lat: numLat,
-        lon: numLon
-      }
-    };
-  } else if (city) {
-    // Validate city
-    if (typeof city !== 'string' || city.trim().length === 0) {
-      return {
-        valid: false,
-        error: 'City name must be a non-empty string'
-      };
-    }
-    
-    return {
-      valid: true,
-      location: { city: city as string }
-    };
-  }
-  
-  return { 
-    valid: false, 
-    error: 'Invalid location parameters' 
-  };
+const handleError = (res: Response, error: any, message: string): void => {
+  console.error(message, error);
+  res.status(500).json({ error: message });
 };
 
 /**
@@ -76,16 +20,59 @@ export const handleCurrentWeatherRequest = async (req: Request, res: Response) =
   try {
     // Validate request parameters
     const validation = validateLocationParams(req.query);
-    
-    if (!validation.valid) {
-      return res.status(400).json({ error: validation.error });
-    }
+    if (!validation.valid) return res.status(400).json({ error: validation.error });
     
     // Fetch weather data
     const weather = await getCurrentWeather(validation.location!);
     res.json(weather);
   } catch (error) {
-    console.error('Error fetching weather:', error);
-    res.status(500).json({ error: 'Failed to fetch weather data' });
+    handleError(res, error, 'Failed to fetch weather data');
+  }
+};
+
+/**
+ * Handle request for default location weather (used on homepage)
+ */
+export const handleDefaultLocationWeatherRequest = async (_req: Request, res: Response) => {
+  try {
+    // Use the configured default location
+    const weather = await getCurrentWeather(DEFAULT_LOCATION);
+    res.json(weather);
+  } catch (error) {
+    handleError(res, error, 'Failed to fetch weather data for default location');
+  }
+};
+
+/**
+ * Get cache status information
+ */
+export const handleCacheStatusRequest = (_req: Request, res: Response) => {
+  try {
+    const cacheStatus = getCacheStatus();
+    res.json({ cacheStatus });
+  } catch (error) {
+    handleError(res, error, 'Failed to retrieve cache status');
+  }
+};
+
+/**
+ * Clear weather cache (for admin/debug purposes)
+ */
+export const handleClearCacheRequest = (req: Request, res: Response) => {
+  try {
+    if (req.query.location) {
+      const validation = validateLocationParams(req.query);
+      if (validation.valid && validation.location) {
+        clearWeatherCache(validation.location);
+        return res.json({ message: 'Cache cleared for specified location' });
+      }
+
+      return res.status(400).json({ error: 'Invalid location parameters' });
+    } else {
+      clearWeatherCache();
+      return res.json({ message: 'Cache cleared for all locations' });
+    }
+  } catch (error) {
+    handleError(res, error, 'Failed to clear cache');
   }
 }; 
