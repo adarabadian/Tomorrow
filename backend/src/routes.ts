@@ -6,8 +6,7 @@ import {
   updateAlert, 
   deleteAlert, 
   evaluateAlertController,
-  getTriggeredAlerts,
-  getFailedFetchAlerts
+  getTriggeredAlerts
 } from './controllers/alertController';
 import { 
   handleCurrentWeatherRequest, 
@@ -26,7 +25,6 @@ export const setupRoutes = (app: Application): void => {
   router.post('/alerts', createAlert);
   router.get('/alerts', getAlerts);
   router.get('/alerts/triggered', getTriggeredAlerts);
-  router.get('/alerts/failed-fetches', getFailedFetchAlerts);
   router.get('/alerts/:id', getAlertById);
   router.put('/alerts/:id', updateAlert);
   router.delete('/alerts/:id', deleteAlert);

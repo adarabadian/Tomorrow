@@ -60,6 +60,8 @@ export const getAlertById = async (req: Request, res: Response) => {
 
 export const updateAlert = async (req: Request, res: Response) => {
   try {
+    // Remove isTriggered and lastChecked from client updates
+    // isTriggered is calculated by the business logic, not set directly
     const { isTriggered, lastChecked, ...updateData } = req.body;
     
     try {
@@ -101,14 +103,5 @@ export const getTriggeredAlerts = async (req: Request, res: Response) => {
     res.json(alerts);
   } catch (error) {
     handleError(res, error, 'Failed to fetch triggered alerts');
-  }
-};
-
-export const getFailedFetchAlerts = async (req: Request, res: Response) => {
-  try {
-    const alerts = await alertRepository.getAlertsWithFailedFetches();
-    res.json(alerts);
-  } catch (error) {
-    handleError(res, error, 'Failed to fetch alerts with failed fetches');
   }
 };

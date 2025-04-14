@@ -157,10 +157,14 @@ export const updateAlertWithValidation = async (
     updateData.resolvedLocation = alertCheck.resolvedLocation;
   }
   
+  // Check if we're updating condition-related fields
+  const isUpdatingCondition = updateData.location || 
+                             updateData.parameter || 
+                             updateData.threshold !== undefined || 
+                             updateData.condition;
+  
   // If updating critical fields, validate them
-  if (updateData.location || updateData.parameter || 
-      updateData.threshold !== undefined || updateData.condition) {
-    
+  if (isUpdatingCondition) {
     const validation = validateAlertData({
       ...existingAlert,
       ...updateData
@@ -168,6 +172,17 @@ export const updateAlertWithValidation = async (
     
     if (!validation.valid) {
       throw createValidationError(validation.error);
+    }
+    
+    // Recalculate isTriggered when conditions change
+    const updatedAlert = { ...existingAlert, ...updateData };
+    const result = await checkAlertCondition(updatedAlert);
+    
+    if (result.locationValid) {
+      // Always recalculate isTriggered when conditions change
+      updateData.isTriggered = result.isTriggered;
+      updateData.lastValue = result.currentValue;
+      updateData.lastChecked = new Date();
     }
   }
   

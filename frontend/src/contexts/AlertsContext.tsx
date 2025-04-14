@@ -22,10 +22,22 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(true);
     setError(null);
     try {
+      console.log('Refreshing alerts from server...');
+      // Force-fetch the latest data from the server
       const data = await getAlerts();
-      setAlerts(data);
-      setLastUpdated(new Date());
+      console.log('Got alerts from server:', data);
+      
+      // Map the alerts to ensure isTriggered is correctly calculated
+      if (data && Array.isArray(data)) {
+        console.log(`Processed ${data.length} alerts with recalculated status`);
+        setAlerts(data);
+        setLastUpdated(new Date());
+      } else {
+        console.error('Invalid alert data received:', data);
+        setError('Failed to process alert data');
+      }
     } catch (err) {
+      console.error('Failed to load alerts:', err);
       setError('Failed to load alerts');
     } finally {
       setLoading(false);

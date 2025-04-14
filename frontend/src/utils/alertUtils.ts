@@ -115,20 +115,33 @@ export const evaluateAlertCondition = (
 ): boolean => {
   const normalizedCondition = normalizeCondition(condition);
   
+  // Log the evaluation inputs for debugging
+  console.log(`Evaluating alert: ${parameter} ${normalizedCondition} ${threshold} (current value: ${currentValue})`);
+  
+  let result = false;
+  
   switch (normalizedCondition) {
     case '>':
-      return currentValue > threshold;
+      result = currentValue > threshold;
+      break;
     case '<':
-      return currentValue < threshold;
+      result = currentValue < threshold;
+      break;
     case '>=':
-      return currentValue >= threshold;
+      result = currentValue >= threshold;
+      break;
     case '<=':
-      return currentValue <= threshold;
+      result = currentValue <= threshold;
+      break;
     case '==':
       // Apply rounding for all parameters when checking equality
       const floorValue = Math.floor(currentValue);
-      return floorValue === threshold;
+      result = floorValue === threshold;
+      break;
     default:
-      return false;
+      result = false;
   }
+  
+  console.log(`Alert evaluation result: ${result}`);
+  return result;
 }; 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -41,7 +41,6 @@ const AlertCard = ({ alert, onDelete, onEdit, onToggleStatus }: AlertCardProps) 
     condition, 
     threshold, 
     location, 
-    status,
     isTriggered,
     resolvedLocation,
     userEmail,
@@ -49,14 +48,6 @@ const AlertCard = ({ alert, onDelete, onEdit, onToggleStatus }: AlertCardProps) 
     lastChecked,
     description
   } = alert;
-
-  // State to track active status
-  const [isActive, setIsActive] = useState(status === 'active' || isTriggered);
-
-  // Update active status when alert props change
-  useEffect(() => {
-    setIsActive(status === 'active' || isTriggered);
-  }, [status, isTriggered]);
 
   // Memoize location string to avoid recalculation on re-renders
   const locationString = useMemo(() => {
@@ -74,7 +65,7 @@ const AlertCard = ({ alert, onDelete, onEdit, onToggleStatus }: AlertCardProps) 
 
   return (
     <Card 
-      className={`alert-card ${isActive ? 'alert-card-active' : 'alert-card-inactive'} alert-card-appear`}
+      className={`alert-card ${isTriggered ? 'alert-card-active' : 'alert-card-inactive'} alert-card-appear`}
       elevation={2}
     >
       <CardContent className="alert-card-content">
@@ -83,8 +74,8 @@ const AlertCard = ({ alert, onDelete, onEdit, onToggleStatus }: AlertCardProps) 
             {name}
           </Typography>
           <Chip
-            label={isActive ? 'Active ⚠' : 'Inactive'}
-            color={isActive ? 'success' : 'default'}
+            label={isTriggered ? 'Active' : 'Inactive'}
+            color={isTriggered ? 'success' : 'default'}
             size="small"
             className="animate-fadeIn"
           />
@@ -153,14 +144,14 @@ const AlertCard = ({ alert, onDelete, onEdit, onToggleStatus }: AlertCardProps) 
       <CardActions className="alert-card-actions">
         <Box>
           {onToggleStatus && (
-            <Tooltip title={isActive ? 'Deactivate Alert' : 'Activate Alert'}>
+            <Tooltip title={isTriggered ? 'Deactivate Alert' : 'Activate Alert'}>
               <IconButton 
                 onClick={onToggleStatus} 
-                color={isActive ? 'success' : 'default'}
-                aria-label={isActive ? 'Deactivate Alert' : 'Activate Alert'}
+                color={isTriggered ? 'success' : 'default'}
+                aria-label={isTriggered ? 'Deactivate Alert' : 'Activate Alert'}
                 className="alert-card-button"
               >
-                {isActive ? <NotificationsActiveIcon /> : <NotificationsOffIcon />}
+                {isTriggered ? <NotificationsActiveIcon /> : <NotificationsOffIcon />}
               </IconButton>
             </Tooltip>
           )}

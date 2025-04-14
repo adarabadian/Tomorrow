@@ -2,7 +2,6 @@ import React from 'react';
 import { Box, Fade, Typography } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import WarningIcon from '@mui/icons-material/Warning';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useAlerts } from '../contexts/AlertsContext';
 import PageHeader from '../components/PageHeader/PageHeader';
 import LoadingState from '../components/LoadingState/LoadingState';
@@ -14,7 +13,6 @@ const CurrentState: React.FC = () => {
 
   // Filter alerts by status
   const triggeredAlerts = alerts.filter(alert => alert.isTriggered);
-  const normalAlerts = alerts.filter(alert => !alert.isTriggered);
 
   return (
     <Box>

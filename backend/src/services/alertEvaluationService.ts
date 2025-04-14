@@ -32,12 +32,21 @@ const groupByLocation = (alerts: Alert[]): Map<string, Alert[]> => {
   
   for (const alert of alerts) {
     try {
-      const location = extractLocation(alert);
-      const locationKey = formatLocationParam(location);
+      // First check if we have a resolved location from previous API calls
+      if (alert.resolvedLocation) {
+        // Use the resolved location as the key
+        const locationKey = alert.resolvedLocation;
+        
+        if (!groups.has(locationKey)) groups.set(locationKey, []);
+        groups.get(locationKey)!.push(alert);
+      } else {
+        // Fall back to extracting from user input if no resolved location exists
+        const location = extractLocation(alert);
+        const locationKey = formatLocationParam(location);
 
-      if (!groups.has(locationKey)) groups.set(locationKey, []);
-      
-      groups.get(locationKey)!.push(alert);
+        if (!groups.has(locationKey)) groups.set(locationKey, []);
+        groups.get(locationKey)!.push(alert);
+      }
     } catch (error) {
       logError.alert(alert.id, error);
     }
@@ -63,8 +72,8 @@ const processAlert = async (alert: Alert, weather: WeatherData): Promise<boolean
     const wasTriggered = alert.isTriggered;
     const isTriggered = evaluateCondition(currentValue, alert);
     
-    // Always update the lastValue
-    await updateAlertStatus(alert.id, isTriggered, currentValue);
+    // Always update the lastValue and save the standardized location name
+    await updateAlertStatus(alert.id, isTriggered, currentValue, weather.location);
     
     // Send notification only if newly triggered
     if (isTriggered && !wasTriggered) {
@@ -81,11 +90,12 @@ const processAlert = async (alert: Alert, weather: WeatherData): Promise<boolean
 /**
  * Update an alert's status in the database
  */
-const updateAlertStatus = async (alertId: string, isTriggered: boolean, currentValue: number): Promise<void> => {
+const updateAlertStatus = async (alertId: string, isTriggered: boolean, currentValue: number, standardizedLocation: string): Promise<void> => {
   await alertRepository.updateAlert(alertId, {
     isTriggered,
     lastChecked: new Date(),
-    lastValue: currentValue
+    lastValue: currentValue,
+    resolvedLocation: standardizedLocation
   });
 };
 
@@ -125,8 +135,15 @@ const fetchWeatherForLocation = async (req: any) => {
   try {
     const weather = await getCurrentWeather(req.location);
     
-    // Update fetch status as success
-    await alertRepository.updateLocationFetchStatus(req.key, { success: true });
+    // Update fetch status as success and store standardized location
+    await alertRepository.updateLocationFetchStatus(req.key, {
+      success: true
+    });
+    
+    // If you want to update the location separately:
+    if (weather.location) {
+      await alertRepository.updateResolvedLocation(req.key, weather.location);
+    }
     
     return { ...req, weather, success: true };
   } catch (error) {

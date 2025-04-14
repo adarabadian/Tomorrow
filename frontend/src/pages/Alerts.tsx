@@ -8,7 +8,6 @@ import { Alert } from '../types/alert';
 import AlertForm from '../components/AlertForm/AlertForm';
 import AlertList from '../components/AlertList/AlertList';
 import AlertEditForm from '../components/AlertEditForm/AlertEditForm';
-import DeleteAlertDialog from '../components/DeleteAlertDialog/DeleteAlertDialog';
 import Notifications from '../components/Notifications/Notifications';
 
 const Alerts: React.FC = () => {
@@ -17,8 +16,6 @@ const Alerts: React.FC = () => {
   // State for UI feedback
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [alertToDelete, setAlertToDelete] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [alertToEdit, setAlertToEdit] = useState<Alert | null>(null);
 
@@ -49,34 +46,36 @@ const Alerts: React.FC = () => {
   // Handle alert update submission
   const handleUpdateAlert = async (id: string, updatedData: Partial<Alert>): Promise<void> => {
     try {
-      await updateAlert(id, updatedData);
-      setSuccessMessage('Alert updated successfully!');
+      console.log('Updating alert:', id);
+      console.log('With data:', updatedData);
+      
+      // Update the alert on the server
+      const updatedAlert = await updateAlert(id, updatedData);
+      console.log('Server response:', updatedAlert);
+      
+      // Explicitly refresh alerts to get the latest data with updated status
+      console.log('Refreshing alerts...');
       await refreshAlerts();
+      
+      // Show success message
+      setSuccessMessage('Alert updated successfully!');
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to update alert';
+      console.error('Error updating alert:', errorMessage);
       setErrorMessage(errorMessage);
     }
   };
 
   // Delete an alert - returns a Promise for the AlertList component
   const handleDeleteAlert = async (id: string): Promise<void> => {
-    setAlertToDelete(id);
-    setDeleteConfirmOpen(true);
-    return new Promise((resolve, reject) => {});
-  };
-
-  // Delete an alert after confirmation
-  const handleDelete = async () => {
-    if (!alertToDelete) return;
-    
     try {
-      await deleteAlert(alertToDelete);
+      await deleteAlert(id);
       setSuccessMessage('Alert deleted successfully!');
       await refreshAlerts();
-      setAlertToDelete(null);
-      setDeleteConfirmOpen(false);
+      return Promise.resolve();
     } catch (err) {
       setErrorMessage('Failed to delete alert');
+      return Promise.reject(err);
     }
   };
 
@@ -114,14 +113,6 @@ const Alerts: React.FC = () => {
           onSubmit={handleUpdateAlert}
         />
       )}
-      
-      {/* Delete Confirmation Dialog */}
-      <DeleteAlertDialog 
-        open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-        onConfirm={handleDelete}
-        loading={loading}
-      />
       
       {/* Notifications */}
       <Notifications 

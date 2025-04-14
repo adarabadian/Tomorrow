@@ -15,7 +15,6 @@ export interface Alert {
   condition: string;
   userEmail: string;
   description?: string;
-  status: 'active' | 'inactive';
   isTriggered: boolean;
   lastChecked: string;
   lastValue?: number;
@@ -47,19 +46,18 @@ export interface AlertSummary {
 // Helper function to map the backend Alert model to our frontend Alert model
 export const mapBackendAlert = (backendAlert: any): Alert => {
   return {
-    id: backendAlert.id || backendAlert._id,
-    _id: backendAlert._id || backendAlert.id,
-    name: backendAlert.name,
-    location: backendAlert.location,
-    resolvedLocation: backendAlert.resolvedLocation,
-    parameter: backendAlert.parameter,
-    threshold: backendAlert.threshold,
-    condition: backendAlert.condition,
-    description: backendAlert.description,
-    userEmail: backendAlert.userEmail || '',
-    status: backendAlert.status || (backendAlert.isTriggered ? 'active' : 'inactive'),
-    isTriggered: backendAlert.isTriggered || false,
-    lastChecked: backendAlert.lastChecked || new Date().toISOString(),
-    lastValue: backendAlert.lastValue
+      id: backendAlert.id || backendAlert._id,
+      _id: backendAlert._id || backendAlert.id,
+      name: backendAlert.name,
+      location: backendAlert.location,
+      resolvedLocation: backendAlert.resolvedLocation,
+      parameter: backendAlert.parameter,
+      threshold: backendAlert.threshold,
+      condition: backendAlert.condition,
+      description: backendAlert.description,
+      userEmail: backendAlert.userEmail || "",
+      isTriggered: backendAlert.isTriggered,
+      lastChecked: backendAlert.lastChecked || new Date().toISOString(),
+      lastValue: backendAlert.lastValue,
   };
 }; 

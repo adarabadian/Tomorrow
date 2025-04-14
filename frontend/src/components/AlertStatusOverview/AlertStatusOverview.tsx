@@ -10,7 +10,6 @@ interface AlertStatusOverviewProps {
 const AlertStatusOverview: React.FC<AlertStatusOverviewProps> = ({ alerts, lastUpdated }) => {
   const totalAlerts = alerts.length;
   const triggeredAlerts = alerts.filter(alert => alert.isTriggered);
-  const normalAlerts = totalAlerts - triggeredAlerts.length;
 
   return (
     <Paper elevation={3} sx={{ p: 3 }}>

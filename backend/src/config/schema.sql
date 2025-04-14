@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS alerts (
   condition VARCHAR(10) NOT NULL,
   description TEXT,
   user_email VARCHAR(255) NOT NULL,
-  status VARCHAR(20) DEFAULT 'active',
   is_triggered BOOLEAN DEFAULT FALSE,
   last_checked TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -19,5 +18,4 @@ CREATE TABLE IF NOT EXISTS alerts (
 );
 
 -- Create index for faster queries
-CREATE INDEX IF NOT EXISTS idx_alerts_user_email ON alerts(user_email);
-CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status); 
+CREATE INDEX IF NOT EXISTS idx_alerts_user_email ON alerts(user_email); 

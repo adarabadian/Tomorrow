@@ -196,16 +196,22 @@ export const updateLocationFetchStatus = async (
 };
 
 /**
- * Get alerts with failed fetches
+ * Updates the resolved location for alerts with the given location key
  */
-export const getAlertsWithFailedFetches = async (): Promise<Alert[]> => {
+export const updateResolvedLocation = async (
+  locationKey: string, 
+  resolvedLocation: string
+): Promise<void> => {
   try {
-    const { rows } = await pool.query(
-      'SELECT * FROM alerts WHERE last_fetch_success = false ORDER BY last_fetch_time DESC'
+    await pool.query(
+      `UPDATE alerts 
+       SET resolved_location = $1
+       WHERE location->>'city' = $2 OR 
+             resolved_location = $2`,
+      [resolvedLocation, locationKey]
     );
-    return rows.map(mapRowToAlert);
   } catch (error) {
-    console.error(`Error getting alerts with failed fetches: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`Error updating resolved location for ${locationKey}: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   }
-}; 
+};
