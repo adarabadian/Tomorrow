@@ -13,7 +13,9 @@ CREATE TABLE IF NOT EXISTS alerts (
   last_checked TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  last_read TIMESTAMP
+  last_value NUMERIC,
+  last_fetch_success BOOLEAN DEFAULT TRUE,
+  last_fetch_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create index for faster queries

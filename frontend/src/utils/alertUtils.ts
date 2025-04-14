@@ -97,4 +97,38 @@ export const getParameterUnit = (parameter: string): string => {
 // Format a condition for display
 export const formatCondition = (parameter: string, condition: string, threshold: number): string => {
   return `${getConditionText(condition)} ${threshold}${getParameterUnit(parameter)}`;
+};
+
+/**
+ * Evaluate if an alert condition is met based on the current value
+ * @param parameter The parameter to check
+ * @param condition The condition operator
+ * @param threshold The threshold value
+ * @param currentValue The current value to evaluate against the threshold
+ * @returns boolean indicating if the condition is met
+ */
+export const evaluateAlertCondition = (
+  parameter: string,
+  condition: string,
+  threshold: number,
+  currentValue: number
+): boolean => {
+  const normalizedCondition = normalizeCondition(condition);
+  
+  switch (normalizedCondition) {
+    case '>':
+      return currentValue > threshold;
+    case '<':
+      return currentValue < threshold;
+    case '>=':
+      return currentValue >= threshold;
+    case '<=':
+      return currentValue <= threshold;
+    case '==':
+      // Apply rounding for all parameters when checking equality
+      const floorValue = Math.floor(currentValue);
+      return floorValue === threshold;
+    default:
+      return false;
+  }
 }; 

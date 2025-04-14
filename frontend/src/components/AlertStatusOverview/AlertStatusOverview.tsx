@@ -25,9 +25,6 @@ const AlertStatusOverview: React.FC<AlertStatusOverviewProps> = ({ alerts, lastU
           <Typography variant="body1" color="text.secondary">
             Active Alerts: {triggeredAlerts.length}
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Normal Alerts: {normalAlerts}
-          </Typography>
         </Box>
         {lastUpdated && (
           <Typography variant="body2" color="text.secondary">

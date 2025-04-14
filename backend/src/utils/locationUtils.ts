@@ -58,8 +58,7 @@ export const extractLocation = (data: {
       lat: data.location.coordinates.lat,
       lon: data.location.coordinates.lon
     };
-  } else if (data.location.city) {
-    return { city: data.location.city };
-  } 
+  } else if (data.location.city) return { city: data.location.city };
+   
   throw new Error('Location must be specified with either coordinates or city');
 }; 

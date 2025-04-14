@@ -53,13 +53,13 @@ export const createAlert = async (alert: Omit<Alert, 'id' | 'createdAt' | 'updat
     const { rows } = await pool.query(
       `INSERT INTO alerts (
         name, location, parameter, threshold, condition, 
-        description, is_triggered, last_checked, user_email, resolved_location
+        description, is_triggered, last_checked, user_email, resolved_location, last_value
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *`,
       [
         alert.name, alert.location, alert.parameter, alert.threshold, alert.condition,
-        alert.description, alert.isTriggered, alert.lastChecked, alert.userEmail, alert.resolvedLocation
+        alert.description, alert.isTriggered, alert.lastChecked, alert.userEmail, alert.resolvedLocation, alert.lastValue
       ]
     );
     return mapRowToAlert(rows[0]);
@@ -112,13 +112,14 @@ export const updateAlert = async (id: string, alert: Partial<Alert>): Promise<Al
            last_checked = COALESCE($8, last_checked),
            user_email = COALESCE($9, user_email),
            resolved_location = COALESCE($10, resolved_location),
+           last_value = COALESCE($11, last_value),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $11
+       WHERE id = $12
        RETURNING *`,
       [
         alert.name, alert.location, alert.parameter, alert.threshold, alert.condition,
         alert.description, alert.isTriggered, alert.lastChecked, alert.userEmail, 
-        alert.resolvedLocation, id
+        alert.resolvedLocation, alert.lastValue, id
       ]
     );
     

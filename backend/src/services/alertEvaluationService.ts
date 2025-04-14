@@ -63,12 +63,12 @@ const processAlert = async (alert: Alert, weather: WeatherData): Promise<boolean
     const wasTriggered = alert.isTriggered;
     const isTriggered = evaluateCondition(currentValue, alert);
     
-    // Only update if the state has changed
-    if (isTriggered !== wasTriggered) {
-      await updateAlertStatus(alert.id, isTriggered, currentValue);
-      
-      // Send notification if newly triggered
-      if (isTriggered && !wasTriggered) await sendNotification(alert, currentValue);
+    // Always update the lastValue
+    await updateAlertStatus(alert.id, isTriggered, currentValue);
+    
+    // Send notification only if newly triggered
+    if (isTriggered && !wasTriggered) {
+      await sendNotification(alert, currentValue);
     }
     
     return true;
@@ -239,7 +239,7 @@ const runEvaluation = async (): Promise<void> => {
  * Start the scheduled evaluation service & run evaluation immediately
  */
 export const startAlertEvaluationService = (): void => {
-  console.log('Starting alert evaluation service (every 5 minutes)');
+  console.log('Starting alert evaluation service (every 10 minutes)');
   runEvaluation();
-  cron.schedule('*/5 * * * *', runEvaluation);
+  cron.schedule('*/10 * * * *', runEvaluation);
 }; 

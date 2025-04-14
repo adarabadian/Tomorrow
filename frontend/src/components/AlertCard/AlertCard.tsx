@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -16,6 +16,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import NotificationsOffIcon from '@mui/icons-material/NotificationsOff';
 import EmailIcon from '@mui/icons-material/Email';
+import DescriptionIcon from '@mui/icons-material/Description';
 import { Alert } from '../../types/alert';
 import { 
   getConditionText, 
@@ -43,23 +44,32 @@ const AlertCard = ({ alert, onDelete, onEdit, onToggleStatus }: AlertCardProps) 
     status,
     isTriggered,
     resolvedLocation,
-    userEmail
+    userEmail,
+    lastValue,
+    lastChecked,
+    description
   } = alert;
+
+  // State to track active status
+  const [isActive, setIsActive] = useState(status === 'active' || isTriggered);
+
+  // Update active status when alert props change
+  useEffect(() => {
+    setIsActive(status === 'active' || isTriggered);
+  }, [status, isTriggered]);
 
   // Memoize location string to avoid recalculation on re-renders
   const locationString = useMemo(() => {
     if (resolvedLocation) return resolvedLocation;
     
-    if (location.city) {
-      return location.city;
-    } else if (location.coordinates) {
+    if (location.city) return location.city;
+    if (location.coordinates) {
       return `Lat: ${location.coordinates.lat.toFixed(2)}, Lon: ${location.coordinates.lon.toFixed(2)}`;
     }
     return 'No location specified';
   }, [resolvedLocation, location]);
 
-  // Determine the active status
-  const isActive = status === 'active' || isTriggered;
+  // Determine icon based on parameter
   const parameterIcon = getParameterIcon(parameter);
 
   return (
@@ -73,7 +83,7 @@ const AlertCard = ({ alert, onDelete, onEdit, onToggleStatus }: AlertCardProps) 
             {name}
           </Typography>
           <Chip
-            label={isActive ? 'Active' : 'Inactive'}
+            label={isActive ? 'Active ⚠' : 'Inactive'}
             color={isActive ? 'success' : 'default'}
             size="small"
             className="animate-fadeIn"
@@ -109,6 +119,35 @@ const AlertCard = ({ alert, onDelete, onEdit, onToggleStatus }: AlertCardProps) 
             </Typography>
           </Box>
         </Box>
+
+        {description && (
+          <Box className="alert-card-description" sx={{ mt: 1 }}>
+            <Box className="alert-card-icon">
+              <DescriptionIcon fontSize="small" />
+            </Box>
+            <Box>
+              <Typography variant="body1" fontWeight="medium">
+                Description:
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {description}
+              </Typography>
+            </Box>
+          </Box>
+        )}
+
+        {lastValue !== undefined && (
+          <Box className="alert-card-last-reading">
+            <Typography variant="body2" fontWeight="medium">
+              Last Reading: {lastValue}{getParameterUnit(parameter)}
+            </Typography>
+            {lastChecked && (
+              <Typography variant="caption" color="text.secondary">
+                {new Date(lastChecked).toLocaleString()}
+              </Typography>
+            )}
+          </Box>
+        )}
       </CardContent>
 
       <CardActions className="alert-card-actions">

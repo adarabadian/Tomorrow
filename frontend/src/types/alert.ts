@@ -18,6 +18,7 @@ export interface Alert {
   status: 'active' | 'inactive';
   isTriggered: boolean;
   lastChecked: string;
+  lastValue?: number;
 }
 
 export interface CreateAlertPayload {
@@ -58,6 +59,7 @@ export const mapBackendAlert = (backendAlert: any): Alert => {
     userEmail: backendAlert.userEmail || '',
     status: backendAlert.status || (backendAlert.isTriggered ? 'active' : 'inactive'),
     isTriggered: backendAlert.isTriggered || false,
-    lastChecked: backendAlert.lastChecked || new Date().toISOString()
+    lastChecked: backendAlert.lastChecked || new Date().toISOString(),
+    lastValue: backendAlert.lastValue
   };
 }; 

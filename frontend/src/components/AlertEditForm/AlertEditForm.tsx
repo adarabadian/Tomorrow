@@ -7,7 +7,9 @@ import {
   DialogActions,
   CircularProgress,
   Box,
-  Typography
+  Typography,
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import AlertBasicInfo from '../AlertBasicInfo/AlertBasicInfo';
@@ -15,6 +17,7 @@ import LocationInput from '../LocationInput/LocationInput';
 import AlertParameters from '../AlertParameters/AlertParameters';
 import FeedbackMessage from '../FeedbackMessage/FeedbackMessage';
 import { Alert } from '../../types/alert';
+import { evaluateAlertCondition } from '../../utils/alertUtils';
 import './AlertEditForm.css';
 import '../Animations.css';
 
@@ -36,7 +39,10 @@ const AlertEditForm: React.FC<AlertEditFormProps> = ({ alert, open, onClose, onS
     parameter: 'temperature',
     threshold: 0,
     condition: '>',
-    userEmail: ''
+    userEmail: '',
+    status: 'inactive',
+    lastValue: undefined,
+    isTriggered: false
   });
   const [useCoordinates, setUseCoordinates] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string | null>>({});
@@ -59,7 +65,10 @@ const AlertEditForm: React.FC<AlertEditFormProps> = ({ alert, open, onClose, onS
           parameter: alert.parameter,
           threshold: alert.threshold,
           condition: alert.condition,
-          userEmail: alert.userEmail
+          userEmail: alert.userEmail,
+          status: alert.status,
+          lastValue: alert.lastValue,
+          isTriggered: alert.isTriggered
         });
         
         // Set location type
@@ -233,6 +242,21 @@ const AlertEditForm: React.FC<AlertEditFormProps> = ({ alert, open, onClose, onS
     
     try {
       setIsSubmitting(true);
+      
+      // Re-evaluate if the alert should be triggered based on new threshold
+      if (editedAlert.lastValue !== undefined && 
+          editedAlert.parameter && 
+          editedAlert.condition && 
+          editedAlert.threshold !== undefined) {
+        const shouldTrigger = evaluateAlertCondition(
+          editedAlert.parameter,
+          editedAlert.condition,
+          editedAlert.threshold,
+          editedAlert.lastValue
+        );
+        editedAlert.isTriggered = shouldTrigger;
+      }
+      
       await onSubmit(alert.id, editedAlert);
       setSuccessMessage('Alert updated successfully!');
       
@@ -246,6 +270,14 @@ const AlertEditForm: React.FC<AlertEditFormProps> = ({ alert, open, onClose, onS
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handle status toggle
+  const handleStatusToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditedAlert({
+      ...editedAlert,
+      status: e.target.checked ? 'active' : 'inactive'
+    });
   };
 
   return (
@@ -304,6 +336,20 @@ const AlertEditForm: React.FC<AlertEditFormProps> = ({ alert, open, onClose, onS
                 condition={editedAlert.condition || '>'}
                 threshold={editedAlert.threshold || 0}
                 onInputChange={handleInputChange}
+              />
+            </Box>
+            
+            <Box className="form-field-animation-3" sx={{ mt: 2 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={editedAlert.status === 'active'}
+                    onChange={handleStatusToggle}
+                    name="status"
+                    color="primary"
+                  />
+                }
+                label={`Alert Status: ${editedAlert.status === 'active' ? 'Active' : 'Inactive'}`}
               />
             </Box>
           </form>

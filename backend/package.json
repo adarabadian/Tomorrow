@@ -8,7 +8,8 @@
     "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
     "debug": "ts-node-dev --inspect --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "test": "jest"
+    "test": "jest",
+    "test:lastvalue": "ts-node src/utils/testLastValue.ts"
   },
   "dependencies": {
     "axios": "^1.6.0",

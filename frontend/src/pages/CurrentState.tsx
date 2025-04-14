@@ -52,18 +52,10 @@ const CurrentState: React.FC = () => {
               backgroundColor="rgba(244, 67, 54, 0.05)"
             />
 
-            <AlertStatusList
-              alerts={normalAlerts}
-              title="Normal Alerts"
-              icon={<CheckCircleIcon />}
-              borderColor="#4caf50"
-              backgroundColor="rgba(76, 175, 80, 0.05)"
-            />
-
-            {alerts.length > 0 && triggeredAlerts.length === 0 && normalAlerts.length === 0 && (
+            {alerts.length > 0 && triggeredAlerts.length === 0 && (
               <Box sx={{ textAlign: 'center', py: 4 }}>
                 <Typography variant="h6" color="text.secondary">
-                  No alerts are currently being monitored
+                  No active alerts at this time
                 </Typography>
               </Box>
             )}

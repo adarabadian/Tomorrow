@@ -96,7 +96,15 @@ const createValidationError = (message?: string): Error => {
  * Create a location error
  */
 const createLocationError = (locationName: string, details?: string): Error => {
-  const errorMsg = `Invalid location: "${locationName || 'Unknown'}". ${details || 'Could not fetch weather data'}. Please provide a valid city name or try removing commas (e.g. "New York" instead of "New York, NY").`;
+  let errorMsg;
+  
+  // Check if this is a rate limit error
+  if (details && details.includes("API rate limit exceeded")) {
+    errorMsg = `API rate limit exceeded. Please try again later.`;
+  } else {
+    errorMsg = `Invalid location: "${locationName || 'Unknown'}". ${details || 'Could not fetch weather data'}. Please provide a valid city name or try removing commas (e.g. "New York" instead of "New York, NY").`;
+  }
+  
   const error = new Error(errorMsg);
   error.name = 'LocationError';
   return error;
@@ -193,7 +201,8 @@ export const createAlertWithValidation = async (
     ...alertData,
     isTriggered: alertCheck.isTriggered,
     lastChecked: new Date(),
-    resolvedLocation: alertCheck.resolvedLocation
+    resolvedLocation: alertCheck.resolvedLocation,
+    lastValue: alertCheck.currentValue
   };
   
   // Create the alert in the database
@@ -209,18 +218,21 @@ export const evaluateAlertById = async (id: string): Promise<{
   name: string;
   isTriggered: boolean;
   lastChecked: Date;
+  lastValue?: number;
 } | null> => {
   // Get the alert by ID
   const alert = await alertRepository.getAlertById(id);
   if (!alert) return null;
 
   // Evaluate the alert
-  const isTriggered = await evaluateAlert(alert);
+  const result = await checkAlertCondition(alert);
+  const isTriggered = result.isTriggered;
   
   // Update in database
   await alertRepository.updateAlert(alert.id, { 
     isTriggered, 
-    lastChecked: new Date() 
+    lastChecked: new Date(),
+    lastValue: result.currentValue
   });
   
   // Return details about the evaluation
@@ -228,6 +240,7 @@ export const evaluateAlertById = async (id: string): Promise<{
     id: alert.id,
     name: alert.name,
     isTriggered,
-    lastChecked: new Date()
+    lastChecked: new Date(),
+    lastValue: result.currentValue
   };
 }; 
