@@ -2,28 +2,9 @@ import { Request, Response } from 'express';
 import * as alertRepository from '../repositories/alertRepository';
 import { 
   updateAlertWithValidation,
-  createAlertWithValidation,
-  evaluateAlertById
+  createAlertWithValidation
 } from '../services/alertService';
-
-/**
- * Handle service errors (validation and location errors) with proper status codes
- */
-const handleServiceError = (res: Response, error: any): boolean => {
-  if (error.name === 'ValidationError' || error.name === 'LocationError') {
-    res.status(400).json({ error: error.message });
-    return true; // Error was handled
-  }
-  return false; // Not handled
-};
-
-/**
- * Standard error handler for controllers
- */
-const handleError = (res: Response, error: any, message: string): void => {
-  console.error(message, error);
-  res.status(500).json({ error: message });
-};
+import { handleServiceError, handleError } from '../utils/errorHandlers';
 
 export const createAlert = async (req: Request, res: Response) => {
   try {
@@ -45,16 +26,6 @@ export const getAlerts = async (req: Request, res: Response) => {
     res.json(alerts);
   } catch (error) {
     handleError(res, error, 'Failed to fetch alerts');
-  }
-};
-
-export const getAlertById = async (req: Request, res: Response) => {
-  try {
-    const alert = await alertRepository.getAlertById(req.params.id);
-    if (!alert) return res.status(404).json({ error: 'Alert not found' });
-    res.json(alert);
-  } catch (error) {
-    handleError(res, error, 'Failed to fetch alert');
   }
 };
 
@@ -84,24 +55,5 @@ export const deleteAlert = async (req: Request, res: Response) => {
     res.status(204).send();
   } catch (error) {
     handleError(res, error, 'Failed to delete alert');
-  }
-};
-
-export const evaluateAlertController = async (req: Request, res: Response) => {
-  try {
-    const result = await evaluateAlertById(req.params.id);
-    if (!result) return res.status(404).json({ error: 'Alert not found' });
-    res.json(result);
-  } catch (error) {
-    handleError(res, error, 'Failed to evaluate alert');
-  }
-};
-
-export const getTriggeredAlerts = async (req: Request, res: Response) => {
-  try {
-    const alerts = await alertRepository.getTriggeredAlerts();
-    res.json(alerts);
-  } catch (error) {
-    handleError(res, error, 'Failed to fetch triggered alerts');
   }
 };

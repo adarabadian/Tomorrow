@@ -4,6 +4,7 @@ import { getCurrentWeather } from './weatherService';
 import { extractLocation } from '../utils/locationUtils';
 import { evaluateCondition, getParameterValue } from '../utils/conditionEvaluator';
 import { validateAlertData } from '../validators/alertValidator';
+import { createValidationError, createLocationError } from '../utils/errorHandlers';
 
 // Return type for the checkAlertCondition function
 export interface AlertConditionResult {
@@ -88,33 +89,6 @@ export const evaluateAlert = async (alert: Alert): Promise<boolean> => {
     console.error('Error evaluating alert:', error);
     return alert.isTriggered; // Keep previous state on error
   }
-};
-
-/**
- * Create a validation error
- */
-const createValidationError = (message?: string): Error => {
-  const error = new Error(message || 'Invalid alert data');
-  error.name = 'ValidationError';
-  return error;
-};
-
-/**
- * Create a location error
- */
-const createLocationError = (locationName: string, details?: string): Error => {
-  let errorMsg;
-  
-  // Check if this is a rate limit error
-  if (details && details.includes("API rate limit exceeded")) {
-    errorMsg = `API rate limit exceeded. Please try again later.`;
-  } else {
-    errorMsg = `Invalid location: "${locationName || 'Unknown'}". ${details || 'Could not fetch weather data'}. Please provide a valid city name or try removing commas (e.g. "New York" instead of "New York, NY").`;
-  }
-  
-  const error = new Error(errorMsg);
-  error.name = 'LocationError';
-  return error;
 };
 
 /**
@@ -263,50 +237,3 @@ export const createAlertWithValidation = async (
   // Create the alert in the database
   return alertRepository.createAlert(newAlert);
 };
-
-/**
- * Build the evaluation result object
- */
-const buildEvaluationResult = (
-  alert: Alert, 
-  isTriggered: boolean, 
-  currentValue: number
-): { id: string; name: string; isTriggered: boolean; lastChecked: Date; lastValue?: number } => {
-  return {
-    id: alert.id,
-    name: alert.name,
-    isTriggered,
-    lastChecked: new Date(),
-    lastValue: currentValue
-  };
-};
-
-/**
- * Evaluate an alert by ID and update its status in the database
- * @returns Details about the evaluation result, or null if alert not found
- */
-export const evaluateAlertById = async (id: string): Promise<{
-  id: string;
-  name: string;
-  isTriggered: boolean;
-  lastChecked: Date;
-  lastValue?: number;
-} | null> => {
-  // Get the alert by ID
-  const alert = await alertRepository.getAlertById(id);
-  if (!alert) return null;
-
-  // Evaluate the alert
-  const result = await checkAlertCondition(alert);
-  const isTriggered = result.isTriggered;
-  
-  // Update in database
-  await alertRepository.updateAlert(alert.id, { 
-    isTriggered, 
-    lastChecked: new Date(),
-    lastValue: result.currentValue
-  });
-  
-  // Return details about the evaluation
-  return buildEvaluationResult(alert, isTriggered, result.currentValue);
-}; 

@@ -5,24 +5,7 @@ import { sendNotification } from './notificationService';
 import { getCurrentWeather, WeatherData } from './weatherService';
 import { extractLocation, formatLocationParam } from '../utils/locationUtils';
 import { evaluateCondition, getParameterValue } from '../utils/conditionEvaluator';
-
-// Error handler functions
-const logError = {
-  alert: (alertId: string, error: any): void => {
-    const message = error.message || 'Unknown error';
-    console.error(`Error processing alert ${alertId}: ${message}`);
-  },
-  
-  location: (locationKey: string, error: any): void => {
-    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
-      console.error(`Timeout error for location ${locationKey}: ${error.message}`);
-    } else if (error.message?.includes('API key')) {
-      console.error(`API key error for location ${locationKey}: ${error.message}`);
-    } else {
-      console.error(`Error processing location ${locationKey}:`, error);
-    }
-  }
-};
+import { logError } from '../utils/errorHandlers';
 
 /**
  * Group alerts by location to minimize API calls

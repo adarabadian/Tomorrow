@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Typography, 
   Grid, 
   Box, 
   CircularProgress, 
-  Alert as MuiAlert
+  Alert as MuiAlert,
+  ToggleButtonGroup,
+  ToggleButton,
+  Stack
 } from '@mui/material';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import TextFieldsIcon from '@mui/icons-material/TextFields';
 import AlertCard from '../AlertCard/AlertCard';
 import DeleteAlertDialog from '../DeleteAlertDialog/DeleteAlertDialog';
 import { Alert } from '../../types/alert';
@@ -19,6 +24,9 @@ interface AlertListProps {
   onRefresh?: () => void;
 }
 
+// Sort options
+type SortOption = 'triggered' | 'name';
+
 const AlertList: React.FC<AlertListProps> = ({ 
   alerts, 
   loading, 
@@ -30,6 +38,7 @@ const AlertList: React.FC<AlertListProps> = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('triggered');
 
   const handleDeleteClick = (alertId: string) => {
     setSelectedAlertId(alertId);
@@ -55,6 +64,31 @@ const AlertList: React.FC<AlertListProps> = ({
     setDeleteDialogOpen(false);
     setSelectedAlertId(null);
   };
+
+  // Handle sort option change
+  const handleSortChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newSortBy: SortOption | null,
+  ) => {
+    if (newSortBy !== null) {
+      setSortBy(newSortBy);
+    }
+  };
+
+  // Sort alerts based on current sort settings
+  const sortedAlerts = useMemo(() => {
+    return [...alerts].sort((a, b) => {
+      if (sortBy === 'triggered') {
+        // Sort by triggered status - triggered first
+        return a.isTriggered === b.isTriggered ? 0 : a.isTriggered ? -1 : 1;
+      } else {
+        // Sort by name - alphabetical (A-Z)
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+        return nameA.localeCompare(nameB);
+      }
+    });
+  }, [alerts, sortBy]);
 
   // Loading state
   if (loading) {
@@ -108,11 +142,40 @@ const AlertList: React.FC<AlertListProps> = ({
   // Display alerts
   return (
     <>
-      <Typography variant="h6" gutterBottom>
-        Your Alerts ({alerts.length})
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6">
+          Your Alerts ({alerts.length})
+        </Typography>
+        
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography variant="body2" color="textSecondary">
+            Sort by:
+          </Typography>
+          <ToggleButtonGroup
+            value={sortBy}
+            exclusive
+            onChange={handleSortChange}
+            size="small"
+            aria-label="sort options"
+          >
+            <ToggleButton value="triggered" aria-label="sort by triggered status">
+              <NotificationsActiveIcon fontSize="small" />
+              <Typography variant="caption" sx={{ ml: 0.5 }}>
+                Triggered first
+              </Typography>
+            </ToggleButton>
+            <ToggleButton value="name" aria-label="sort by name">
+              <TextFieldsIcon fontSize="small" />
+              <Typography variant="caption" sx={{ ml: 0.5 }}>
+                A-Z
+              </Typography>
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Stack>
+      </Box>
+      
       <Grid container spacing={3}>
-        {alerts.map(alert => (
+        {sortedAlerts.map(alert => (
           <Grid item xs={12} md={6} lg={4} key={alert.id || alert._id}>
             <AlertCard 
               alert={alert} 

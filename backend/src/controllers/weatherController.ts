@@ -1,17 +1,10 @@
 import { Request, Response } from 'express';
 import { getCurrentWeather, getCacheStatus, clearWeatherCache } from '../services/weatherService';
 import { validateLocationParams } from '../validators/locationValidator';
+import { handleError } from '../utils/errorHandlers';
 
 // Default location configuration (can be moved to environment variables if needed)
 const DEFAULT_LOCATION = { city: 'New York City' };
-
-/**
- * Standard error handler for weather controllers
- */
-const handleError = (res: Response, error: any, message: string): void => {
-  console.error(message, error);
-  res.status(500).json({ error: message });
-};
 
 /**
  * Handle request for current weather

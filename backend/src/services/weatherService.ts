@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Location, formatLocationParam, formatLocationString } from '../utils/locationUtils';
+import { createLocationError } from '../utils/errorHandlers';
 
 // Types
 export interface WeatherData {
@@ -93,7 +94,7 @@ const handleWeatherApiError = (error: any, locationParam: string): never => {
     reason
   });
 
-  throw new Error(reason);
+  throw createLocationError(locationParam, reason);
 };
 
 /**

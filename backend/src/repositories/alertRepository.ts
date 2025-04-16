@@ -146,19 +146,6 @@ export const deleteAlert = async (id: string): Promise<boolean> => {
 };
 
 /**
- * Gets all alerts that are currently triggered
- */
-export const getTriggeredAlerts = async (): Promise<Alert[]> => {
-  try {
-    const { rows } = await pool.query('SELECT * FROM alerts WHERE is_triggered = true ORDER BY last_checked DESC');
-    return rows.map(mapRowToAlert);
-  } catch (error) {
-    console.error(`Error getting triggered alerts: ${error instanceof Error ? error.message : String(error)}`);
-    throw error;
-  }
-};
-
-/**
  * Gets alerts for a specific user by email
  */
 export const getAlertsByUserEmail = async (email: string): Promise<Alert[]> => {

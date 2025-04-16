@@ -58,6 +58,17 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setError('Failed to load alerts');
   }, []);
 
+  // Preserve scroll position during updates
+  const preserveScrollPosition = useCallback((callback: () => Promise<void>) => {
+    const scrollPosition = window.scrollY;
+    
+    return callback().finally(() => {
+      window.setTimeout(() => {
+        window.scrollTo(0, scrollPosition);
+      }, 0);
+    });
+  }, []);
+
   // Process alerts data from server
   const processAlertsData = useCallback((data: unknown) => {
     if (data && Array.isArray(data)) {
@@ -73,15 +84,18 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const refreshAlerts = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
-      const data = await getAlerts();
-      processAlertsData(data);
-    } catch (err) {
-      handleFetchError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [processAlertsData, handleFetchError]);
+    
+    return preserveScrollPosition(async () => {
+      try {
+        const data = await getAlerts();
+        processAlertsData(data);
+      } catch (err) {
+        handleFetchError(err);
+      } finally {
+        setLoading(false);
+      }
+    });
+  }, [processAlertsData, handleFetchError, preserveScrollPosition]);
 
   // Initial load
   useEffect(() => {

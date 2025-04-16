@@ -79,6 +79,7 @@ const AlertCard = ({ alert, onDelete, onEdit, onToggleStatus }: AlertCardProps) 
               color='error'
               size="small"
               className="animate-fadeIn"
+              sx={{ mt: 0.5 }}
             />
           )}
         </Box>
