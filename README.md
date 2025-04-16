@@ -105,7 +105,7 @@ A full-stack application that provides weather monitoring and alerts based on us
 ## Considerations
 
 - I thought adding a feature of updating an alert would be good so I added it
-- On startup, the backend will retrieve data on backend. Then, it'll fetch data again each 10 minutes (to avoid API limits because it's free tier)
+- On startup, the backend will retrieve data from Tomorrow API. Then, it'll fetch data again each 10 minutes (to avoid API limits because it's free tier)
 - I added a feature of polling, to refresh data periodically to enhance UX and alert with popup on real time when a alert is newly triggered
 - I chose polling over socket.io as I wanted something lightweight
 - Regarding bonus app task - I tried working on an app, but I wasn't sure about what I'm doing so I thought investing more in the web app will be better than doing mobile app im not 100% familiar with
