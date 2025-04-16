@@ -7,7 +7,7 @@ import { Alert } from '../models/Alert';
 interface AlertRow {
   id: string;
   name: string;
-  location: any; // JSON field in PostgreSQL
+  location: any;
   parameter: string;
   threshold: number;
   condition: '>' | '<' | '>=' | '<=' | '==';
@@ -123,9 +123,7 @@ export const updateAlert = async (id: string, alert: Partial<Alert>): Promise<Al
       ]
     );
     
-    if (!rows.length) {
-      return null; // Return null if no record was updated (not found)
-    }
+    if (!rows.length) return null;
     
     return mapRowToAlert(rows[0]);
   } catch (error) {

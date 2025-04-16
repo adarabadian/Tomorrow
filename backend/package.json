@@ -2,9 +2,9 @@
   "name": "weather-alert-backend",
   "version": "1.0.0",
   "description": "Backend for weather alert system",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "scripts": {
-    "start": "node dist/index.js",
+    "start": "ts-node src/index.ts",
     "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
     "debug": "ts-node-dev --inspect --respawn --transpile-only src/index.ts",
     "build": "tsc",

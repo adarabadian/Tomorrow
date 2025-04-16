@@ -73,12 +73,14 @@ const AlertCard = ({ alert, onDelete, onEdit, onToggleStatus }: AlertCardProps) 
           <Typography variant="h6" fontWeight="bold">
             {name}
           </Typography>
-          <Chip
-            label={isTriggered ? 'Active' : 'Inactive'}
-            color={isTriggered ? 'success' : 'default'}
-            size="small"
-            className="animate-fadeIn"
-          />
+          {isTriggered && (
+            <Chip
+              label='🔔 Triggered'
+              color='error'
+              size="small"
+              className="animate-fadeIn"
+            />
+          )}
         </Box>
 
         <Divider className="alert-card-divider" />

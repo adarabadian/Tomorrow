@@ -103,9 +103,10 @@ export const clearWeatherCache = (location?: Location) => {
   if (location) {
     const locationParam = formatLocationParam(location);
     weatherCache.delete(locationParam);
-  } else {
-    weatherCache.clear();
+    return;
   }
+
+  weatherCache.clear();
 };
 
 /**

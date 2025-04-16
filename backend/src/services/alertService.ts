@@ -53,6 +53,19 @@ export const checkAlertCondition = async (alert: Partial<Alert>): Promise<AlertC
 };
 
 /**
+ * Update alert in database if triggered status has changed
+ */
+const persistAlertStatusChange = async (alert: Alert, isTriggered: boolean, currentValue: number): Promise<void> => {
+  if (isTriggered !== alert.isTriggered) {
+    await alertRepository.updateAlert(alert.id, { 
+      isTriggered,
+      lastChecked: new Date(),
+      lastValue: currentValue
+    });
+  }
+};
+
+/**
  * Evaluate an alert and update its status in the database if needed
  */
 export const evaluateAlert = async (alert: Alert): Promise<boolean> => {
@@ -68,13 +81,7 @@ export const evaluateAlert = async (alert: Alert): Promise<boolean> => {
     const isTriggered = result.isTriggered;
     
     // Update alert in database if triggered status has changed
-    if (isTriggered !== alert.isTriggered) {
-      await alertRepository.updateAlert(alert.id, { 
-        isTriggered,
-        lastChecked: new Date(),
-        lastValue: result.currentValue
-      });
-    }
+    await persistAlertStatusChange(alert, isTriggered, result.currentValue);
 
     return isTriggered;
   } catch (error) {
@@ -135,6 +142,58 @@ const validateLocation = async (alert: Partial<Alert>): Promise<AlertConditionRe
 };
 
 /**
+ * Validate alert data structure and conditions
+ * @throws ValidationError if validation fails
+ */
+const validateAlertStructure = (alertData: Partial<Alert>): void => {
+  const validation = validateAlertData(alertData);
+  if (!validation.valid) throw createValidationError(validation.error);
+};
+
+/**
+ * Check if update affects condition-related fields
+ */
+const isConditionUpdate = (updateData: Partial<Alert>): boolean => {
+  return !!(updateData.location || 
+            updateData.parameter || 
+            updateData.threshold !== undefined || 
+            updateData.condition);
+};
+
+/**
+ * Update alert trigger state based on the latest condition check
+ */
+const updateAlertTriggerState = async (
+  existingAlert: Alert, 
+  updateData: Partial<Alert>
+): Promise<void> => {
+  const updatedAlert = { ...existingAlert, ...updateData };
+  const result = await checkAlertCondition(updatedAlert);
+  
+  if (result.locationValid) {
+    updateData.isTriggered = result.isTriggered;
+    updateData.lastValue = result.currentValue;
+    updateData.lastChecked = new Date();
+  }
+};
+
+/**
+ * Handle location validation and update resolved location
+ */
+const handleLocationValidation = async (
+  existingAlert: Alert,
+  updateData: Partial<Alert>
+): Promise<void> => {
+  if (!updateData.location) return;
+  
+  const newAlert = { ...existingAlert, ...updateData };
+  const alertCheck = await validateLocation(newAlert);
+  
+  // Update the resolved location
+  updateData.resolvedLocation = alertCheck.resolvedLocation;
+};
+
+/**
  * Update an alert with validation
  * This function centralizes all validation and checks in the service layer
  * @throws Error with name 'ValidationError' if validation fails
@@ -148,46 +207,36 @@ export const updateAlertWithValidation = async (
   const existingAlert = await alertRepository.getAlertById(id);
   if (!existingAlert) return null;
   
-  // If updating location, verify it exists with an alert check
-  if (updateData.location) {
-    const newAlert = { ...existingAlert, ...updateData };
-    const alertCheck = await validateLocation(newAlert);
-    
-    // Update the resolved location
-    updateData.resolvedLocation = alertCheck.resolvedLocation;
-  }
+  // Handle location validation if location is being updated
+  await handleLocationValidation(existingAlert, updateData);
   
   // Check if we're updating condition-related fields
-  const isUpdatingCondition = updateData.location || 
-                             updateData.parameter || 
-                             updateData.threshold !== undefined || 
-                             updateData.condition;
-  
-  // If updating critical fields, validate them
-  if (isUpdatingCondition) {
-    const validation = validateAlertData({
-      ...existingAlert,
-      ...updateData
-    });
-    
-    if (!validation.valid) {
-      throw createValidationError(validation.error);
-    }
+  if (isConditionUpdate(updateData)) {
+    // Validate the updated alert structure
+    validateAlertStructure({ ...existingAlert, ...updateData });
     
     // Recalculate isTriggered when conditions change
-    const updatedAlert = { ...existingAlert, ...updateData };
-    const result = await checkAlertCondition(updatedAlert);
-    
-    if (result.locationValid) {
-      // Always recalculate isTriggered when conditions change
-      updateData.isTriggered = result.isTriggered;
-      updateData.lastValue = result.currentValue;
-      updateData.lastChecked = new Date();
-    }
+    await updateAlertTriggerState(existingAlert, updateData);
   }
   
   // Everything validated, update the alert
   return alertRepository.updateAlert(id, updateData);
+};
+
+/**
+ * Prepare a new alert with current trigger state
+ */
+const prepareNewAlert = async (
+  alertData: Omit<Alert, 'id' | 'createdAt' | 'updatedAt'>,
+  alertCheck: AlertConditionResult
+): Promise<Omit<Alert, 'id' | 'createdAt' | 'updatedAt'>> => {
+  return {
+    ...alertData,
+    isTriggered: alertCheck.isTriggered,
+    lastChecked: new Date(),
+    resolvedLocation: alertCheck.resolvedLocation,
+    lastValue: alertCheck.currentValue
+  };
 };
 
 /**
@@ -200,10 +249,7 @@ export const createAlertWithValidation = async (
   alertData: Omit<Alert, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<Alert> => {
   // Validate the alert data structure
-  const validation = validateAlertData(alertData);
-  if (!validation.valid) {
-    throw createValidationError(validation.error);
-  }
+  validateAlertStructure(alertData);
   
   // Check if the alert condition is currently met and validate location
   const alertCheck = await validateLocation({
@@ -212,16 +258,27 @@ export const createAlertWithValidation = async (
   });
   
   // Create alert with the correct triggered state
-  const newAlert = {
-    ...alertData,
-    isTriggered: alertCheck.isTriggered,
-    lastChecked: new Date(),
-    resolvedLocation: alertCheck.resolvedLocation,
-    lastValue: alertCheck.currentValue
-  };
+  const newAlert = await prepareNewAlert(alertData, alertCheck);
   
   // Create the alert in the database
   return alertRepository.createAlert(newAlert);
+};
+
+/**
+ * Build the evaluation result object
+ */
+const buildEvaluationResult = (
+  alert: Alert, 
+  isTriggered: boolean, 
+  currentValue: number
+): { id: string; name: string; isTriggered: boolean; lastChecked: Date; lastValue?: number } => {
+  return {
+    id: alert.id,
+    name: alert.name,
+    isTriggered,
+    lastChecked: new Date(),
+    lastValue: currentValue
+  };
 };
 
 /**
@@ -251,11 +308,5 @@ export const evaluateAlertById = async (id: string): Promise<{
   });
   
   // Return details about the evaluation
-  return {
-    id: alert.id,
-    name: alert.name,
-    isTriggered,
-    lastChecked: new Date(),
-    lastValue: result.currentValue
-  };
+  return buildEvaluationResult(alert, isTriggered, result.currentValue);
 }; 

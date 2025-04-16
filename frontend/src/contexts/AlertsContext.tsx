@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Alert } from '../types/alert';
 import { getAlerts } from '../services/alertService';
+import { Snackbar, Alert as MuiAlert } from '@mui/material';
 
 interface AlertsContextType {
   alerts: Alert[];
@@ -17,32 +18,70 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [notification, setNotification] = useState<{ message: string, id: string } | null>(null);
+  const previousAlertsRef = useRef<Alert[]>([]);
 
+  // Check for newly triggered alerts and show notification
+  const checkForNewlyTriggeredAlerts = useCallback((newAlerts: Alert[]) => {
+    if (previousAlertsRef.current.length === 0) return;
+    const newlyTriggered = getNewlyTriggeredAlerts(previousAlertsRef.current, newAlerts);
+    if (newlyTriggered.length > 0) handleNewlyTriggeredAlerts(newlyTriggered);
+  }, []);
+
+  const getNewlyTriggeredAlerts = (previousAlerts: Alert[], newAlerts: Alert[]): Alert[] => {
+    return newAlerts.filter(newAlert => 
+      newAlert.isTriggered && 
+      !previousAlertsRef.current.some(oldAlert => 
+        oldAlert.id === newAlert.id && oldAlert.isTriggered
+      )
+    );
+  };
+
+  const handleNewlyTriggeredAlerts = (newlyTriggered: Alert[]) => {
+    const triggerAlert = newlyTriggered[0];
+    setNotification({
+      message: `Alert: "${triggerAlert.name}" has been triggered!`,
+      id: triggerAlert.id
+    });
+  };
+
+  // Update state with new alerts data
+  const updateAlertsState = useCallback((data: Alert[]) => {
+    previousAlertsRef.current = data;
+    setAlerts(data);
+    setLastUpdated(new Date());
+  }, []);
+
+  // Handle fetch errors
+  const handleFetchError = useCallback((err: unknown) => {
+    console.error('Failed to load alerts:', err);
+    setError('Failed to load alerts');
+  }, []);
+
+  // Process alerts data from server
+  const processAlertsData = useCallback((data: unknown) => {
+    if (data && Array.isArray(data)) {
+      checkForNewlyTriggeredAlerts(data);
+      updateAlertsState(data);
+    } else {
+      console.error('Invalid alert data received:', data);
+      setError('Failed to process alert data');
+    }
+  }, [checkForNewlyTriggeredAlerts, updateAlertsState]);
+
+  // Main refresh function
   const refreshAlerts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('Refreshing alerts from server...');
-      // Force-fetch the latest data from the server
       const data = await getAlerts();
-      console.log('Got alerts from server:', data);
-      
-      // Map the alerts to ensure isTriggered is correctly calculated
-      if (data && Array.isArray(data)) {
-        console.log(`Processed ${data.length} alerts with recalculated status`);
-        setAlerts(data);
-        setLastUpdated(new Date());
-      } else {
-        console.error('Invalid alert data received:', data);
-        setError('Failed to process alert data');
-      }
+      processAlertsData(data);
     } catch (err) {
-      console.error('Failed to load alerts:', err);
-      setError('Failed to load alerts');
+      handleFetchError(err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [processAlertsData, handleFetchError]);
 
   // Initial load
   useEffect(() => {
@@ -55,17 +94,37 @@ export const AlertsProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => clearInterval(interval);
   }, [refreshAlerts]);
 
+  // Clear notification after 6 seconds
+  const handleCloseNotification = () => {
+    setNotification(null);
+  };
+
   return (
     <AlertsContext.Provider value={{ alerts, loading, error, refreshAlerts, lastUpdated }}>
       {children}
+      
+      {/* Alert notification */}
+      <Snackbar
+        open={!!notification}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MuiAlert
+          onClose={handleCloseNotification}
+          severity="warning"
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {notification?.message || ''}
+        </MuiAlert>
+      </Snackbar>
     </AlertsContext.Provider>
   );
 };
 
 export const useAlerts = () => {
   const context = useContext(AlertsContext);
-  if (context === undefined) {
-    throw new Error('useAlerts must be used within an AlertsProvider');
-  }
+  if (context === undefined) throw new Error('useAlerts must be used within an AlertsProvider');
   return context;
 }; 
