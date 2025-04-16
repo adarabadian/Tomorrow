@@ -28,23 +28,19 @@ const locationFailures = new Map<string, { timestamp: Date, reason: string }>();
  */
 export const getCurrentWeather = async (location: Location): Promise<WeatherData> => {
   const locationParam = formatLocationParam(location);
+  const cachedEntry = weatherCache.get(locationParam);
   
-  // Check if we have cached data that hasn't expired
-  if (isCacheValid(locationParam)) {
+  // Return cached data if valid
+  if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_EXPIRATION_MS) {
     console.log(`Returning cached weather data for ${locationParam}`);
-    return weatherCache.get(locationParam)!.data;
+    return cachedEntry.data;
   }
   
   try {
     const weatherData = await fetchWeatherFromApi(location, locationParam);
     
-    // Cache the new weather data
-    weatherCache.set(locationParam, {
-      data: weatherData,
-      timestamp: Date.now()
-    });
-    
-    // Clear any previous failures for this location on success
+    // Cache the new data and clear failures
+    weatherCache.set(locationParam, { data: weatherData, timestamp: Date.now() });
     locationFailures.delete(locationParam);
     
     return weatherData;
@@ -86,17 +82,10 @@ const fetchWeatherFromApi = async (location: Location, locationParam: string): P
  * Handle errors from the weather API
  */
 const handleWeatherApiError = (error: any, locationParam: string): never => {
-  console.error("Error fetching weather data:", error);
-  
-  let reason = "Failed to fetch weather data";
-
-  if (error.response?.status === 401 || error.response?.status === 403) {
-      reason = "API key invalid or unauthorized";
-  } else if (error.response?.status === 429) {
-      reason = "API rate limit exceeded";
-  } else if (error.response?.data?.type === "Invalid Query Parameters") {
-      reason = "Location not found";
-  }
+  const reason = error.response?.status === 401 || error.response?.status === 403 ? "API key invalid or unauthorized" :
+    error.response?.status === 429 ? "API rate limit exceeded" :
+    error.response?.data?.type === "Invalid Query Parameters" ? "Location not found" :
+    "Failed to fetch weather data";
   
   // Record the failure
   locationFailures.set(locationParam, { 

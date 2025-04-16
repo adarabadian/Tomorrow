@@ -54,22 +54,19 @@ const transporter = createTransporter();
 const generateAlertMessage = (alert: Alert, currentValue: number): EmailMessage => {
   const location = extractLocation(alert);
   const locationString = formatLocationString({}, location);
-  const conditionString = `${alert.parameter} ${alert.condition} ${alert.threshold}`;
-  const frontendUrl = getFrontendUrl();
   
   return {
     subject: `Weather Alert: ${alert.name}`,
     text: `Alert "${alert.name}" has been triggered!
     
 Location: ${locationString}
-Condition: ${conditionString}
+Condition: ${alert.parameter} ${alert.condition} ${alert.threshold}
     
 Current value: ${currentValue}
     
-You can manage your alerts at: ${frontendUrl}/alerts`
+You can manage your alerts at: ${getFrontendUrl()}/alerts`
   };
 };
-
 
 const createEmailConfig = (to: string, message: EmailMessage): EmailConfig => {
   return {
